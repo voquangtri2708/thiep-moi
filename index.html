@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Thiệp Mời Sinh Nhật | Online Birthday Invitation</title>
+  <!-- Google Fonts & Tailwind CSS CDN & Canvas Confetti -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Quicksand:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    :root {
+      --primary-pink: #ff6b8b;
+      --primary-gold: #e6a756;
+      --bg-cream: #fffaf5;
+    }
+
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background-color: #1a1921;
+      color: #333333;
+    }
+
+    .font-handwriting {
+      font-family: 'Dancing Script', cursive;
+    }
+
+    .font-serif-title {
+      font-family: 'Playfair Display', serif;
+    }
+
+    .font-outfit {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    /* Custom Glassmorphism */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+
+    /* Animation nắp phong bì */
+    .envelope-lid {
+      clip-path: polygon(0 0, 50% 55%, 100% 0);
+      transform-origin: top;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .open-envelope .envelope-lid {
+      transform: rotateX(180deg);
+      z-index: 1;
+    }
+
+    /* Floating elements */
+    @keyframes floatBalloon {
+      0% {
+        transform: translateY(0px) rotate(0deg);
+      }
+
+      50% {
+        transform: translateY(-12px) rotate(3deg);
+      }
+
+      100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+    }
+
+    .animate-float {
+      animation: floatBalloon 4s ease-in-out infinite;
+    }
+
+    /* Pulse Glow */
+    @keyframes pulseGlow {
+
+      0%,
+      100% {
+        box-shadow: 0 0 15px rgba(255, 107, 139, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 25px rgba(255, 107, 139, 0.8);
+      }
+    }
+
+    .pulse-glow {
+      animation: pulseGlow 2.5s infinite;
+    }
+
+    /* Toast animation */
+    @keyframes toastIn {
+      from {
+        transform: translateY(100%) scale(0.9);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .animate-toast {
+      animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* Scrollbar tùy chỉnh */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #ff9ebb;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body class="flex justify-center min-h-screen antialiased selection:bg-pink-200">
+
+  <!-- Mobile Container chính (giới hạn chiều rộng mobile chuẩn, căn giữa trên màn hình desktop) -->
+  <div
+    class="relative w-full max-w-md min-h-screen bg-[#fffcf8] shadow-2xl overflow-x-hidden flex flex-col justify-between border-x border-stone-800/10">
+
+    <!-- TOP NAVIGATION BAR (Thanh công cụ chuyển đổi giữa các View) -->
+    <header
+      class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-pink-100/80 px-4 py-2.5 flex items-center justify-between shadow-xs">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="switchRoute('/')">
+        <div
+          class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+          <i class="fa-solid fa-cake-candles text-xs"></i>
+        </div>
+        <span class="font-outfit font-bold text-sm text-stone-800 tracking-tight">PartyInvi</span>
+      </div>
+
+      <nav class="flex items-center gap-1 bg-stone-100/80 p-1 rounded-full text-xs font-semibold">
+        <button id="navBtn-home" onclick="switchRoute('/')"
+          class="px-3 py-1.5 rounded-full transition-all text-stone-600 hover:text-pink-600 flex items-center gap-1">
+          <i class="fa-solid fa-envelope-open"></i> <span class="hidden sm:inline">Thiệp</span>
+        </button>
+        <button id="navBtn-send" onclick="switchRoute('/send')"
+          class="px-3 py-1.5 rounded-full transition-all text-stone-600 hover:text-pink-600 flex items-center gap-1">
+          <i class="fa-solid fa-paper-plane"></i> <span>Gửi Mời</span>
+        </button>
+        <button id="navBtn-edit" onclick="switchRoute('/edit')"
+          class="px-3 py-1.5 rounded-full transition-all text-stone-600 hover:text-pink-600 flex items-center gap-1">
+          <i class="fa-solid fa-sliders"></i> <span>Sửa Thiệp</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Nút Bật/Tắt Nhạc Nền Trôi Nổi (Tạm thời ẩn) -->
+    <button id="musicToggle"
+      class="hidden fixed right-4 bottom-20 z-40 w-11 h-11 bg-white/90 backdrop-blur-md rounded-full shadow-lg items-center justify-center text-pink-600 border border-pink-200 hover:scale-110 active:scale-95 transition-all">
+      <i id="musicIcon" class="fa-solid fa-music text-sm"></i>
+    </button>
+    <audio id="bgAudio" loop class="hidden"></audio>
+
+    <!-- ==================== VIEW 1: THIỆP MỜI (HOME INVITATION) ==================== -->
+    <main id="view-home" class="flex-1 relative">
+
+      <!-- 1. COVER / PHONG BÌ MỞ THIỆP SANG TRỌNG -->
+      <div id="envelopeSection"
+        class="relative z-30 min-h-[calc(100vh-57px)] flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-pink-50 via-rose-50/50 to-amber-50/40">
+        <div
+          class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-pink-100/80 text-pink-600 text-[11px] font-bold tracking-wider uppercase mb-3 animate-float">
+          <i class="fa-solid fa-sparkles"></i> Invitation Card
+        </div>
+
+        <h2 id="coverHostTitle" class="text-3xl font-serif-title font-bold text-stone-800 mb-1">Mừng Sinh Nhật</h2>
+        <p id="coverHostSub" class="text-sm font-handwriting text-pink-600 font-bold mb-6 text-xl">Chào Đón Tuổi Mới</p>
+
+        <!-- Tên Khách Mời Cá Nhân Hóa (?to=Tên) -->
+        <div
+          class="w-full bg-white/95 backdrop-blur-md border border-pink-200/80 rounded-2xl p-5 shadow-lg mb-8 relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-16 h-16 bg-pink-100 rounded-full blur-xl opacity-60"></div>
+          <span class="text-[11px] uppercase text-stone-400 font-bold tracking-widest block mb-1">Trân trọng kính
+            mời</span>
+          <div id="guestNameCover" class="text-2xl font-bold font-handwriting text-pink-600 mt-1">Quý Khách Quý Mến
+          </div>
+        </div>
+
+        <!-- Phong Bì Tương Tác -->
+        <div
+          class="relative w-64 h-48 bg-gradient-to-br from-pink-200 to-rose-200 rounded-2xl shadow-2xl flex items-center justify-center border-2 border-pink-300/80 cursor-pointer group pulse-glow"
+          onclick="openInvitation()">
+          <div class="absolute inset-0 envelope-lid bg-gradient-to-b from-pink-300 to-rose-300 rounded-t-2xl"></div>
+          <div
+            class="z-10 bg-white/95 backdrop-blur px-5 py-3 rounded-full shadow-md border border-pink-200 flex items-center gap-2 group-hover:scale-105 transition-transform">
+            <i class="fa-solid fa-envelope-open-text text-pink-500 text-base"></i>
+            <span class="text-sm font-bold text-stone-800">Chạm Để Mở Thiệp</span>
+          </div>
+        </div>
+        <p class="text-xs text-stone-400 mt-6 animate-pulse font-medium">Bấm vào phong bì để xem nội dung bữa tiệc 🎉
+        </p>
+      </div>
+
+      <!-- 2. NỘI DUNG THIỆP CHÍNH (Hiển thị sau khi bấm mở phong bì) -->
+      <div id="cardContent" class="hidden opacity-0 transition-all duration-700 pb-12">
+
+        <!-- Banner Header & Ảnh Đại Diện -->
+        <div class="relative w-full h-[380px] overflow-hidden">
+          <img id="cardAvatar" src="" alt="Birthday Host"
+            class="w-full h-full object-cover object-center brightness-95 transition-transform duration-1000 hover:scale-105" />
+          <div class="absolute inset-0 bg-gradient-to-t from-[#fffcf8] via-black/20 to-black/40"></div>
+
+          <div class="absolute top-4 left-4">
+            <span id="cardBadge"
+              class="bg-pink-500/90 backdrop-blur-md text-white text-[11px] px-3.5 py-1 rounded-full uppercase tracking-wider font-bold shadow-md">
+              Birthday Party 🎉
+            </span>
+          </div>
+
+          <div class="absolute bottom-6 inset-x-0 text-center px-4">
+            <h1 id="cardHostName" class="text-3xl font-serif-title font-bold text-white drop-shadow-md">Bảo Uyên</h1>
+            <p id="cardEventTitle" class="text-sm text-pink-100 font-semibold mt-1 drop-shadow">Mừng Tiệc Sinh Nhật 2
+              Tuổi</p>
+            <p id="cardEventDateShort" class="text-xs text-stone-200 font-medium mt-1">18:00 • 15 . 09 . 2026</p>
+          </div>
+        </div>
+
+        <!-- Khối Lời Mời & Thân Gửi -->
+        <section class="px-6 py-6 text-center">
+          <p id="cardGreetingQuote" class="text-sm italic text-stone-600 leading-relaxed font-serif-title px-2">
+            "Tuổi mới rực rỡ, thêm nhiều niềm vui và những hành trình mới!"
+          </p>
+
+          <div
+            class="mt-5 p-4 rounded-2xl bg-gradient-to-r from-pink-50 via-rose-50 to-amber-50 border border-pink-100/80 shadow-xs">
+            <span class="text-xs text-stone-500 font-medium">Trân trọng kính mời:</span>
+            <h3 id="guestNameMain" class="text-2xl font-bold text-pink-600 font-handwriting mt-0.5">Quý Khách</h3>
+            <p class="text-xs text-stone-600 mt-1">Tới tham dự bữa tiệc sinh nhật thân mật cùng mình nhé!</p>
+          </div>
+        </section>
+
+        <hr class="border-t border-dashed border-pink-200 mx-8 my-1" />
+
+        <!-- THÔNG TIN THỜI GIAN & ĐỊA ĐIỂM -->
+        <section class="px-6 py-6 text-center space-y-6">
+          <div class="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm">
+            <div
+              class="w-11 h-11 mx-auto rounded-full bg-pink-100 text-pink-500 flex items-center justify-center mb-2.5 text-lg">
+              <i class="fa-regular fa-calendar-check"></i>
+            </div>
+            <h4 class="text-xs font-bold uppercase tracking-widest text-stone-400">Thời Gian Tổ Chức</h4>
+            <p id="cardDateText" class="text-xl font-serif-title font-bold text-pink-600 mt-1">18:00 • Thứ Ba,
+              15/09/2026</p>
+            <p id="cardLunarDateText" class="text-xs text-stone-400 italic mt-0.5">(Nhằm ngày 05 tháng 8 năm Bính Ngọ)
+            </p>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm">
+            <div
+              class="w-11 h-11 mx-auto rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-2.5 text-lg">
+              <i class="fa-solid fa-location-dot"></i>
+            </div>
+            <h4 class="text-xs font-bold uppercase tracking-widest text-stone-400">Địa Điểm Tổ Chức</h4>
+            <p id="cardLocationName" class="text-base font-bold text-stone-800 mt-1">Nhà Hàng & Rooftop Lounge</p>
+            <p id="cardLocationAddress" class="text-xs text-stone-600 mt-1 leading-relaxed">123 Đường Nguyễn Huệ, Phường
+              Bến Nghé, Quận 1, TP. HCM</p>
+
+            <a id="cardMapsBtn" href="#" target="_blank"
+              class="inline-flex items-center gap-2 mt-4 text-xs bg-pink-50 text-pink-600 hover:bg-pink-100 font-semibold px-5 py-2.5 rounded-full border border-pink-200 shadow-xs transition">
+              <i class="fa-solid fa-map-location-dot text-sm"></i> Xem Chỉ Đường Google Maps
+            </a>
+          </div>
+        </section>
+
+        <!-- ĐẾM NGƯỢC (COUNTDOWN TIMER) -->
+        <section
+          class="mx-6 p-5 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white text-center shadow-lg">
+          <h4 class="text-xs font-bold uppercase tracking-widest text-pink-100 mb-3">Đếm Ngược Đến Giờ G Party 🎉</h4>
+          <div class="grid grid-cols-4 gap-2 text-stone-800">
+            <div class="bg-white/95 backdrop-blur rounded-xl p-2.5 shadow-sm">
+              <span id="cd-days" class="text-xl font-bold text-pink-600 font-outfit">00</span>
+              <p class="text-[10px] text-stone-500 font-semibold uppercase">Ngày</p>
+            </div>
+            <div class="bg-white/95 backdrop-blur rounded-xl p-2.5 shadow-sm">
+              <span id="cd-hours" class="text-xl font-bold text-pink-600 font-outfit">00</span>
+              <p class="text-[10px] text-stone-500 font-semibold uppercase">Giờ</p>
+            </div>
+            <div class="bg-white/95 backdrop-blur rounded-xl p-2.5 shadow-sm">
+              <span id="cd-minutes" class="text-xl font-bold text-pink-600 font-outfit">00</span>
+              <p class="text-[10px] text-stone-500 font-semibold uppercase">Phút</p>
+            </div>
+            <div class="bg-white/95 backdrop-blur rounded-xl p-2.5 shadow-sm">
+              <span id="cd-seconds" class="text-xl font-bold text-pink-600 font-outfit">00</span>
+              <p class="text-[10px] text-stone-500 font-semibold uppercase">Giây</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ALBUM ẢNH KỶ NIỆM -->
+        <section class="px-6 py-8">
+          <div class="text-center mb-5">
+            <h4 class="text-lg font-serif-title font-bold text-stone-800">Album Kỷ Niệm</h4>
+            <p class="text-xs text-stone-500">Những khoảnh khắc đáng nhớ ✨</p>
+          </div>
+
+          <div id="galleryContainer" class="grid grid-cols-2 gap-3">
+            <!-- Render động từ JavaScript -->
+          </div>
+        </section>
+
+        <!-- HỘP MỪNG SINH NHẬT (Nút bật VietQR popup) -->
+        <section class="px-6 py-4 text-center">
+          <button onclick="toggleGiftModal(true)"
+            class="w-full py-4 px-4 bg-gradient-to-r from-amber-400 via-rose-500 to-pink-500 text-white rounded-2xl font-bold shadow-lg hover:opacity-95 active:scale-[0.99] transition flex items-center justify-center gap-2 text-sm">
+            <i class="fa-solid fa-gift text-lg"></i> Gửi Quà Mừng & Chúc Phúc
+          </button>
+        </section>
+
+        <!-- SỔ LƯU BÚT LỜI CHÚC -->
+        <section class="px-6 py-6">
+          <div class="text-center mb-4">
+            <h4 class="text-lg font-serif-title font-bold text-stone-800">Sổ Lưu Bút</h4>
+            <p class="text-xs text-stone-500">Gửi lời chúc mừng sinh nhật ngọt ngào 💕</p>
+          </div>
+
+          <form id="wishForm" class="space-y-3 bg-white p-4 rounded-2xl border border-pink-100 shadow-sm"
+            onsubmit="submitWish(event)">
+            <input id="wishAuthor" type="text" placeholder="Tên của bạn" required
+              class="w-full px-3.5 py-2.5 text-xs border border-stone-200 rounded-xl focus:outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-400" />
+            <textarea id="wishMessage" rows="3" placeholder="Viết lời chúc sinh nhật tại đây..." required
+              class="w-full px-3.5 py-2.5 text-xs border border-stone-200 rounded-xl focus:outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-400"></textarea>
+            <button type="submit"
+              class="w-full py-2.5 bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition shadow-sm">
+              Gửi Lời Chúc 🎉
+            </button>
+          </form>
+
+          <!-- Danh sách lời chúc đã gửi -->
+          <div id="wishesList" class="mt-4 space-y-2.5 max-h-64 overflow-y-auto pr-1">
+            <!-- Render động từ JavaScript -->
+          </div>
+        </section>
+
+        <!-- Footer chân trang -->
+        <footer class="text-center text-[11px] text-stone-400 pt-6 pb-4 border-t border-stone-100">
+          <p class="font-semibold text-stone-500">Made with ❤️ for Your Birthday Party</p>
+          <p class="mt-0.5">Online Invitation Static Web App</p>
+        </footer>
+      </div>
+    </main>
+
+    <!-- ==================== VIEW 2: CHỈNH SỬA THIỆP (/EDIT) ==================== -->
+    <main id="view-edit" class="hidden flex-1 p-5 bg-stone-50/80">
+      <div class="mb-5">
+        <h2 class="text-xl font-bold font-outfit text-stone-800 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-pink-500"></i> Chỉnh Sửa Thông Tin Thiệp
+        </h2>
+        <p class="text-xs text-stone-500 mt-1">Tùy biến toàn bộ nội dung, thời gian, hình ảnh và VietQR theo ý bạn</p>
+      </div>
+
+      <form id="editForm" onsubmit="saveConfig(event)" class="space-y-5">
+
+        <!-- SECTION 1: THÔNG TIN BỮA TIỆC -->
+        <div class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-pen"></i> 1. Thông Tin Bữa Tiệc
+          </h3>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Tên chủ nhân tiệc</label>
+            <input type="text" id="inputHostName" placeholder="Ví dụ: Gia Bảo" required
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Tiêu đề bữa tiệc / Số tuổi</label>
+            <input type="text" id="inputEventTitle" placeholder="Ví dụ: Mừng Tiệc Sinh Nhật 20 Tuổi" required
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Lời mời / Thông điệp ngắn</label>
+            <textarea id="inputGreetingQuote" rows="2" placeholder="Nhập lời chúc hoặc thông điệp của bạn..."
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none"></textarea>
+          </div>
+        </div>
+
+        <!-- SECTION 2: THỜI GIAN & ĐỊA ĐIỂM -->
+        <div class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-clock font-normal"></i> 2. Thời Gian & Địa Điểm
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Ngày & Giờ (Dùng đếm ngược ISO)</label>
+              <input type="datetime-local" id="inputEventDateISO" required
+                class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Dòng thời gian hiển thị</label>
+              <input type="text" id="inputEventDateText" placeholder="18:00 • Thứ Ba, 15/09/2026" required
+                class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Ghi chú ngày âm lịch (nếu có)</label>
+            <input type="text" id="inputLunarDateText" placeholder="(Nhằm ngày 05 tháng 8 năm Bính Ngọ)"
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Tên địa điểm</label>
+            <input type="text" id="inputLocationName" placeholder="Ví dụ: Nhà Hàng & Rooftop Lounge" required
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Địa chỉ chi tiết</label>
+            <input type="text" id="inputLocationAddress" placeholder="Ví dụ: 123 Đường Nguyễn Huệ, Quận 1, TP. HCM"
+              required
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Link Google Maps (Chỉ đường)</label>
+            <input type="url" id="inputGoogleMapsUrl" placeholder="https://maps.google.com/?q=..."
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- SECTION 3: HÌNH ẢNH THIỆP & ALBUM -->
+        <div class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-image"></i> 3. Hình Ảnh Thiệp & Album
+          </h3>
+
+          <!-- Ảnh Đại Diện -->
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-2">Ảnh Đại Diện Thiệp</label>
+            <div class="flex items-center gap-3 bg-stone-50 p-3 rounded-2xl border border-stone-200/80">
+              <img id="avatarPreviewEdit" src="" alt="Avatar Preview"
+                class="w-16 h-16 object-cover rounded-xl shadow-xs border border-stone-200 bg-stone-200" />
+              <div class="flex-1 space-y-1.5">
+                <input type="hidden" id="inputAvatarUrl" />
+                <div class="flex flex-wrap items-center gap-2">
+                  <label
+                    class="cursor-pointer inline-flex items-center gap-1.5 bg-pink-500 hover:bg-pink-600 text-white text-xs px-3.5 py-2 rounded-xl font-bold transition shadow-xs">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Chọn Ảnh Từ Máy
+                    <input type="file" accept="image/*" class="hidden" onchange="handleAvatarUpload(event)" />
+                  </label>
+                  <button type="button" onclick="toggleAvatarUrlInput()"
+                    class="text-[11px] text-stone-500 hover:text-pink-600 underline font-medium">
+                    Nhập link ảnh
+                  </button>
+                </div>
+                <input type="url" id="inputAvatarUrlCustom" placeholder="Dán link ảnh tại đây..."
+                  onchange="setAvatarFromUrlInput()"
+                  class="hidden w-full px-2.5 py-1.5 text-xs border border-stone-300 rounded-lg focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Album Ảnh Kỷ Niệm -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <label class="block text-xs font-bold text-stone-700">Album Ảnh Kỷ Niệm</label>
+                <p class="text-[10px] text-stone-400">Tải lên các bức ảnh để hiển thị trong album</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <label
+                  class="cursor-pointer inline-flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-pink-600 text-xs px-3 py-1.5 rounded-xl font-bold border border-pink-200 transition">
+                  <i class="fa-solid fa-plus text-pink-500"></i> Thêm Ảnh
+                  <input type="file" accept="image/*" multiple class="hidden" onchange="handleGalleryUpload(event)" />
+                </label>
+              </div>
+            </div>
+
+            <!-- Preview Grid with Delete Buttons -->
+            <div id="galleryEditPreviewGrid" class="grid grid-cols-3 gap-2 mt-3">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 4: MÃ VIETQR MỪNG SINH NHẬT -->
+        <div class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-qrcode"></i> 4. Tạo Mã VietQR Mừng Sinh Nhật
+          </h3>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Chọn Ngân Hàng</label>
+            <select id="inputBankId" onchange="updateQrPreview()"
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none bg-white">
+              <!-- Danh sách ngân hàng chuẩn VietQR sẽ render từ JS -->
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Số tài khoản</label>
+              <input type="text" id="inputAccountNo" placeholder="Ví dụ: 0987654321" oninput="updateQrPreview()"
+                class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none font-mono font-bold" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Tên chủ tài khoản (Viết hoa)</label>
+              <input type="text" id="inputAccountName" placeholder="Ví dụ: NGUYEN GIA BAO" oninput="updateQrPreview()"
+                class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none font-bold uppercase" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Nội dung chuyển khoản mặc định</label>
+              <input type="text" id="inputAddInfo" placeholder="Mung sinh nhat Gia Bao" oninput="updateQrPreview()"
+                class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Số tiền gợi ý (Tùy chọn)</label>
+              <input type="number" id="inputAmount" placeholder="0" oninput="updateQrPreview()"
+                class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <!-- Live Preview VietQR Image -->
+          <div class="pt-2 text-center">
+            <span class="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-2">Xem Trước Mã VietQR
+              Động</span>
+            <div class="inline-block p-3 bg-stone-50 border border-stone-200 rounded-2xl shadow-inner">
+              <img id="qrPreviewImg" src="" alt="VietQR Preview"
+                class="w-44 h-44 object-contain mx-auto rounded-xl shadow-xs" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="space-y-2 pt-2 pb-6">
+          <button type="submit"
+            class="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-bold shadow-lg hover:opacity-95 transition flex items-center justify-center gap-2 text-sm">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu Tất Cả Thay Đổi
+          </button>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="switchRoute('/')"
+              class="py-2.5 bg-white border border-stone-300 text-stone-700 rounded-xl font-semibold text-xs hover:bg-stone-100 transition">
+              <i class="fa-solid fa-eye text-pink-500"></i> Xem Thử Thiệp
+            </button>
+            <button type="button" onclick="resetToDefaultConfig()"
+              class="py-2.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl font-semibold text-xs hover:bg-rose-100 transition">
+              <i class="fa-solid fa-rotate-left"></i> Khôi Phục Mặc Định
+            </button>
+          </div>
+        </div>
+      </form>
+    </main>
+
+    <!-- ==================== VIEW 3: GỬI MỜI KHÁCH (/SEND) ==================== -->
+    <main id="view-send" class="hidden flex-1 p-5 bg-stone-50/80">
+      <div class="mb-5">
+        <h2 class="text-xl font-bold font-outfit text-stone-800 flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane text-pink-500"></i> Tạo Link Mời Cá Nhân Hóa
+        </h2>
+        <p class="text-xs text-stone-500 mt-1">Nhập tên khách mời để tạo đường link độc quyền chứa tên riêng của người
+          đó</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-stone-200/80 shadow-sm space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1.5">Tên người / nhóm cần mời</label>
+          <input type="text" id="sendGuestInput" placeholder="Ví dụ: Anh Nam & Chị Linh, Bạn Trinh..."
+            oninput="generateInviteLink()"
+            class="w-full px-3.5 py-3 text-sm border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 font-semibold" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-stone-500 mb-1">Đường Link Thiệp Mời Được Tạo</label>
+          <div class="flex gap-2">
+            <input type="text" id="sendGeneratedUrl" readonly
+              class="flex-1 px-3 py-2.5 text-xs bg-stone-100 border border-stone-200 rounded-xl text-pink-700 font-mono font-medium focus:outline-none select-all" />
+            <button onclick="copyGeneratedLink()"
+              class="px-4 py-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-copy"></i> Sao Chép
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="previewGuestCard()"
+            class="py-2.5 bg-pink-50 text-pink-600 hover:bg-pink-100 border border-pink-200 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-eye"></i> Xem Thử Link Này
+          </button>
+          <button onclick="saveAndCopyGuestLink()"
+            class="py-2.5 bg-stone-800 hover:bg-stone-900 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-bookmark"></i> Lưu Vào Danh Sách
+          </button>
+        </div>
+
+        <hr class="border-t border-stone-100 my-2" />
+
+        <!-- Nút Chia Sẻ Nhanh -->
+        <div>
+          <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-2">Chia Sẻ Nhanh
+            Qua</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="shareViaZalo()"
+              class="py-2 px-3 bg-blue-500 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-comment"></i> Zalo
+            </button>
+            <button onclick="shareViaMessenger()"
+              class="py-2 px-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl text-xs font-bold hover:opacity-90 transition flex items-center justify-center gap-1.5">
+              <i class="fa-brands fa-facebook-messenger"></i> Messenger
+            </button>
+            <button onclick="shareViaSMS()"
+              class="py-2 px-3 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-message"></i> Tin Nhắn
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DANH SÁCH KHÁCH MỜI ĐÃ TẠO LINK -->
+      <div class="mt-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-stone-800">Danh Sách Link Mời Đã Lưu</h3>
+          <button onclick="clearInvitedGuests()" class="text-[11px] text-rose-500 hover:underline">Xóa tất cả</button>
+        </div>
+
+        <div id="invitedGuestsList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+          <!-- Render động từ JS -->
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== MODAL MỪNG SINH NHẬT (VIETQR DISPLAY) ==================== -->
+    <div id="giftModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
+      <div class="bg-white w-full max-w-xs rounded-3xl p-6 text-center shadow-2xl relative animate-toast">
+        <button onclick="toggleGiftModal(false)"
+          class="absolute right-3.5 top-3.5 text-stone-400 hover:text-stone-700 w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+
+        <div
+          class="w-12 h-12 mx-auto bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-3 text-xl shadow-xs">
+          <i class="fa-solid fa-gift"></i>
+        </div>
+        <h3 class="text-base font-bold text-stone-800">Mừng Sinh Nhật & Chúc Phúc</h3>
+        <p class="text-xs text-stone-500 mt-0.5">Quét mã QR để chuyển khoản trực tiếp</p>
+
+        <!-- Ảnh mã VietQR Động -->
+        <div class="mt-4 p-2.5 bg-stone-50 rounded-2xl border border-stone-200/80 inline-block shadow-inner">
+          <img id="modalQrImg" src="" alt="VietQR Mừng Sinh Nhật" class="w-48 h-48 object-contain mx-auto rounded-xl" />
+        </div>
+
+        <div
+          class="mt-3 text-xs text-left bg-stone-50 p-3.5 rounded-2xl space-y-1.5 text-stone-600 border border-stone-100">
+          <p class="flex justify-between"><span>Ngân hàng:</span> <b id="modalBankName" class="text-stone-800">MB
+              Bank</b></p>
+          <p class="flex justify-between"><span>STK:</span> <b id="modalAccountNo"
+              class="font-mono text-pink-600 text-sm">0987654321</b></p>
+          <p class="flex justify-between"><span>Chủ TK:</span> <b id="modalAccountName"
+              class="text-stone-800 uppercase">NGUYEN GIA BAO</b></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION FLOATING -->
+    <div id="toastNotification"
+      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden bg-stone-900/90 text-white backdrop-blur px-4 py-2.5 rounded-full text-xs font-semibold shadow-xl items-center gap-2 border border-stone-700/50">
+      <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+      <span id="toastMessage">Thông báo</span>
+    </div>
+
+  </div>
+
+  <!-- SCRIPT LOGIC XỬ LÝ TOÀN BỘ WEB APP -->
+  <script>
+    // 1. DANH SÁCH NGÂN HÀNG VIỆT NAM CHUẨN VIETQR
+    const VIETNAM_BANKS = [
+      { bin: "970422", name: "MBBank (Ngân hàng Quân Đội)" },
+      { bin: "970436", name: "Vietcombank (VCB)" },
+      { bin: "970407", name: "Techcombank (TCB)" },
+      { bin: "970432", name: "VPBank" },
+      { bin: "970416", name: "ACB (Ngân hàng Á Châu)" },
+      { bin: "970418", name: "BIDV" },
+      { bin: "970405", name: "Agribank" },
+      { bin: "970415", name: "VietinBank" },
+      { bin: "970423", name: "TPBank" },
+      { bin: "970403", name: "Sacombank" },
+      { bin: "970437", name: "HDBank" },
+      { bin: "970448", name: "OCB (Phương Đông)" },
+      { bin: "970426", name: "MSB (Hàng Hải)" },
+      { bin: "970441", name: "VIB (Quốc Tế)" },
+      { bin: "970443", name: "SHB" },
+      { bin: "970431", name: "Eximbank" },
+      { bin: "970440", name: "SeABank" },
+      { bin: "970428", name: "Nam A Bank" }
+    ];
+
+    // 2. CONFIG MẶC ĐỊNH MỪNG SINH NHẬT
+    const DEFAULT_CONFIG = {
+      hostName: "Gia Bảo",
+      eventTitle: "Mừng Tiệc Sinh Nhật 20 Tuổi",
+      greetingQuote: "Tuổi mới rực rỡ, thêm nhiều niềm vui và những hành trình mới tươi đẹp!",
+      eventDateISO: "2026-09-15T18:00",
+      eventDateText: "18:00 • Thứ Ba, 15/09/2026",
+      lunarDateText: "(Nhằm ngày 05 tháng 8 năm Bính Ngọ)",
+      locationName: "Nhà Hàng & Rooftop Lounge",
+      locationAddress: "123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
+      googleMapsUrl: "https://maps.google.com/?q=Nguyen+Hue+Walker+Street+District+1+HCMC",
+      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=800&auto=format&fit=crop",
+      galleryUrls: [
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=500&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?q=80&w=500&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?q=80&w=500&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=500&auto=format&fit=crop"
+      ],
+      musicUrl: "https://cdn.pixabay.com/download/audio/2022/05/16/audio_db6591201e.mp3?filename=acoustic-guitars-ambient-uplifting-112191.mp3",
+      qr: {
+        bankId: "970422",
+        bankName: "MBBank",
+        accountNo: "0987654321",
+        accountName: "NGUYEN GIA BAO",
+        amount: "",
+        addInfo: "Mung sinh nhat Gia Bao"
+      }
+    };
+
+    // Global state
+    let config = JSON.parse(localStorage.getItem('birthday_invitation_config')) || DEFAULT_CONFIG;
+    let wishes = JSON.parse(localStorage.getItem('birthday_wishes')) || [
+      { name: "Bạn Minh", text: "Chúc mừng sinh nhật bạn hiền! Tuổi mới luôn vui vẻ, hạnh phúc và thành công nhé! 🎂🎉", time: "Hôm qua" },
+      { name: "Chị Thảo", text: "Happy Birthday! Chúc em luôn xinh đẹp, rạng rỡ và tràn đầy năng lượng! ✨", time: "Vừa xong" }
+    ];
+    let invitedGuests = JSON.parse(localStorage.getItem('invited_guests_list')) || [];
+
+    // 3. ROUTER CLIENT-SIDE (Hỗ trợ /, /edit, /send, #/edit, #/send, ?page=edit)
+    function getCurrentRoute() {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      const urlParams = new URLSearchParams(window.location.search);
+      const pageParam = urlParams.get('page');
+
+      if (hash === '#/edit' || pageParam === 'edit' || path.endsWith('/edit') || path.endsWith('/edit.html')) return '/edit';
+      if (hash === '#/send' || pageParam === 'send' || path.endsWith('/send') || path.endsWith('/send.html')) return '/send';
+      return '/';
+    }
+
+    function switchRoute(route) {
+      if (route === '/edit') window.location.hash = '#/edit';
+      else if (route === '/send') window.location.hash = '#/send';
+      else window.location.hash = '#/';
+
+      renderView();
+    }
+
+    function renderView() {
+      const route = getCurrentRoute();
+      const viewHome = document.getElementById('view-home');
+      const viewEdit = document.getElementById('view-edit');
+      const viewSend = document.getElementById('view-send');
+
+      const btnHome = document.getElementById('navBtn-home');
+      const btnSend = document.getElementById('navBtn-send');
+      const btnEdit = document.getElementById('navBtn-edit');
+
+      // Reset styles
+      [btnHome, btnSend, btnEdit].forEach(btn => {
+        btn.classList.remove('bg-pink-500', 'text-white', 'shadow-xs');
+        btn.classList.add('text-stone-600');
+      });
+
+      viewHome.classList.add('hidden');
+      viewEdit.classList.add('hidden');
+      viewSend.classList.add('hidden');
+
+      if (route === '/edit') {
+        viewEdit.classList.remove('hidden');
+        btnEdit.classList.add('bg-pink-500', 'text-white', 'shadow-xs');
+        btnEdit.classList.remove('text-stone-600');
+        populateEditForm();
+      } else if (route === '/send') {
+        viewSend.classList.remove('hidden');
+        btnSend.classList.add('bg-pink-500', 'text-white', 'shadow-xs');
+        btnSend.classList.remove('text-stone-600');
+        generateInviteLink();
+        renderInvitedGuests();
+      } else {
+        viewHome.classList.remove('hidden');
+        btnHome.classList.add('bg-pink-500', 'text-white', 'shadow-xs');
+        btnHome.classList.remove('text-stone-600');
+        renderInvitationCard();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 4. RENDER GIAO DIỆN THIỆP CHÍNH (VIEW HOME)
+    function renderInvitationCard() {
+      // Cover
+      document.getElementById('coverHostTitle').innerText = config.eventTitle || "Mừng Sinh Nhật";
+      document.getElementById('coverHostSub').innerText = `Sinh Nhật ${config.hostName}`;
+
+      // Main Card
+      document.getElementById('cardAvatar').src = config.avatarUrl || DEFAULT_CONFIG.avatarUrl;
+      document.getElementById('cardHostName').innerText = config.hostName;
+      document.getElementById('cardEventTitle').innerText = config.eventTitle;
+      document.getElementById('cardEventDateShort').innerText = config.eventDateText;
+      document.getElementById('cardGreetingQuote').innerText = `"${config.greetingQuote}"`;
+      document.getElementById('cardDateText').innerText = config.eventDateText;
+      document.getElementById('cardLunarDateText').innerText = config.lunarDateText || "";
+      document.getElementById('cardLocationName').innerText = config.locationName;
+      document.getElementById('cardLocationAddress').innerText = config.locationAddress;
+      document.getElementById('cardMapsBtn').href = config.googleMapsUrl || "#";
+
+      // Audio
+      document.getElementById('bgAudio').src = config.musicUrl || DEFAULT_CONFIG.musicUrl;
+
+      // Album ảnh
+      const galleryBox = document.getElementById('galleryContainer');
+      const gallery = config.galleryUrls && config.galleryUrls.length > 0 ? config.galleryUrls : DEFAULT_CONFIG.galleryUrls;
+      const rotations = ['rotate-[-2deg]', 'rotate-[2deg]', 'rotate-[1deg]', 'rotate-[-1deg]'];
+      galleryBox.innerHTML = gallery.map((url, index) => `
+        <div class="bg-white p-2 rounded-2xl shadow-xs border border-stone-100 ${rotations[index % 4]} hover:rotate-0 transition-transform duration-300">
+          <img src="${url}" class="w-full h-36 object-cover rounded-xl" alt="Gallery Photo ${index + 1}" />
+        </div>
+      `).join('');
+
+      // VietQR Modal Setup
+      setupQrModal();
+
+      // Guest Name
+      initGuestName();
+      renderWishes();
+    }
+
+    function initGuestName() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guestName = urlParams.get('to') || urlParams.get('guest');
+      if (guestName) {
+        const decodedName = decodeURIComponent(guestName.replace(/\+/g, ' '));
+        document.getElementById('guestNameCover').innerText = decodedName;
+        document.getElementById('guestNameMain').innerText = decodedName;
+        document.getElementById('wishAuthor').value = decodedName;
+      }
+    }
+
+    // MỞ PHONG BÌ & PHÁO HOA CONFETTI
+    function openInvitation() {
+      const envelope = document.getElementById('envelopeSection');
+      const card = document.getElementById('cardContent');
+
+      envelope.classList.add('transition-all', 'duration-500', 'opacity-0', 'scale-95');
+      setTimeout(() => {
+        envelope.classList.add('hidden');
+        card.classList.remove('hidden');
+        setTimeout(() => {
+          card.classList.remove('opacity-0');
+        }, 50);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Bắn Pháo Hoa Confetti Mừng Sinh Nhật
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        }
+      }, 500);
+    }
+
+    // NHẠC NỀN (Tạm thời ẩn)
+    const audio = document.getElementById('bgAudio');
+    const musicBtn = document.getElementById('musicToggle');
+    const musicIcon = document.getElementById('musicIcon');
+    if (musicBtn && audio) {
+      musicBtn.addEventListener('click', () => {
+        if (audio.paused) {
+          audio.play();
+          musicIcon.classList.add('animate-spin');
+        } else {
+          audio.pause();
+          musicIcon.classList.remove('animate-spin');
+        }
+      });
+    }
+
+    // COUNTDOWN TIMER
+    function updateCountdown() {
+      const eventTime = new Date(config.eventDateISO || "2026-09-15T18:00").getTime();
+      const now = new Date().getTime();
+      const diff = eventTime - now;
+
+      if (diff > 0) {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        document.getElementById('cd-days').innerText = String(days).padStart(2, '0');
+        document.getElementById('cd-hours').innerText = String(hours).padStart(2, '0');
+        document.getElementById('cd-minutes').innerText = String(minutes).padStart(2, '0');
+        document.getElementById('cd-seconds').innerText = String(seconds).padStart(2, '0');
+      }
+    }
+    setInterval(updateCountdown, 1000);
+
+    // 5. VIETQR GENERATOR API & MODAL
+    function buildVietQrUrl(bankBin, accountNo, accountName, amount, addInfo) {
+      const encName = encodeURIComponent(accountName || "");
+      const encInfo = encodeURIComponent(addInfo || "");
+      const amt = amount ? Number(amount) : 0;
+      return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amt}&addInfo=${encInfo}&accountName=${encName}`;
+    }
+
+    function setupQrModal() {
+      const qrData = config.qr || DEFAULT_CONFIG.qr;
+      const bankObj = VIETNAM_BANKS.find(b => b.bin === qrData.bankId) || { name: qrData.bankName || "Ngân hàng" };
+
+      document.getElementById('modalBankName').innerText = bankObj.name;
+      document.getElementById('modalAccountNo').innerText = qrData.accountNo;
+      document.getElementById('modalAccountName').innerText = qrData.accountName;
+      document.getElementById('modalQrImg').src = buildVietQrUrl(qrData.bankId, qrData.accountNo, qrData.accountName, qrData.amount, qrData.addInfo);
+    }
+
+    function toggleGiftModal(show) {
+      const modal = document.getElementById('giftModal');
+      if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    // 6. POPULATE FORM & SAVE CONFIG (VIEW EDIT)
+    let currentGalleryUrls = [];
+
+    function populateBankSelect() {
+      const select = document.getElementById('inputBankId');
+      select.innerHTML = VIETNAM_BANKS.map(b => `<option value="${b.bin}">${b.name}</option>`).join('');
+    }
+
+    function populateEditForm() {
+      populateBankSelect();
+
+      document.getElementById('inputHostName').value = config.hostName || "";
+      document.getElementById('inputEventTitle').value = config.eventTitle || "";
+      document.getElementById('inputGreetingQuote').value = config.greetingQuote || "";
+      document.getElementById('inputEventDateISO').value = config.eventDateISO || "";
+      document.getElementById('inputEventDateText').value = config.eventDateText || "";
+      document.getElementById('inputLunarDateText').value = config.lunarDateText || "";
+      document.getElementById('inputLocationName').value = config.locationName || "";
+      document.getElementById('inputLocationAddress').value = config.locationAddress || "";
+      document.getElementById('inputGoogleMapsUrl').value = config.googleMapsUrl || "";
+
+      // Avatar preview setup
+      const avatarUrl = config.avatarUrl || DEFAULT_CONFIG.avatarUrl;
+      document.getElementById('inputAvatarUrl').value = avatarUrl;
+      document.getElementById('avatarPreviewEdit').src = avatarUrl;
+      const customUrlInput = document.getElementById('inputAvatarUrlCustom');
+      if (customUrlInput) {
+        customUrlInput.value = avatarUrl;
+        customUrlInput.classList.add('hidden');
+      }
+
+      // Gallery album setup
+      currentGalleryUrls = [...(config.galleryUrls && config.galleryUrls.length > 0 ? config.galleryUrls : DEFAULT_CONFIG.galleryUrls)];
+      renderGalleryEditPreview();
+
+      const qr = config.qr || DEFAULT_CONFIG.qr;
+      document.getElementById('inputBankId').value = qr.bankId || "970422";
+      document.getElementById('inputAccountNo').value = qr.accountNo || "";
+      document.getElementById('inputAccountName').value = qr.accountName || "";
+      document.getElementById('inputAddInfo').value = qr.addInfo || "";
+      document.getElementById('inputAmount').value = qr.amount || "";
+
+      updateQrPreview();
+    }
+
+    function toggleAvatarUrlInput() {
+      const field = document.getElementById('inputAvatarUrlCustom');
+      if (field) field.classList.toggle('hidden');
+    }
+
+    function setAvatarFromUrlInput() {
+      const url = document.getElementById('inputAvatarUrlCustom').value.trim();
+      if (url) {
+        document.getElementById('inputAvatarUrl').value = url;
+        document.getElementById('avatarPreviewEdit').src = url;
+      }
+    }
+
+    function handleAvatarUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('inputAvatarUrl').value = e.target.result;
+        document.getElementById('avatarPreviewEdit').src = e.target.result;
+        showToast("Đã tải ảnh đại diện lên!", "success");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleGalleryUpload(event) {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+
+      let loadedCount = 0;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          currentGalleryUrls.push(e.target.result);
+          loadedCount++;
+          if (loadedCount === files.length) {
+            renderGalleryEditPreview();
+            showToast(`Đã thêm ${files.length} ảnh vào album!`, "success");
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function removeGalleryItem(index) {
+      currentGalleryUrls.splice(index, 1);
+      renderGalleryEditPreview();
+      showToast("Đã xóa ảnh khỏi album", "info");
+    }
+
+    function renderGalleryEditPreview() {
+      const grid = document.getElementById('galleryEditPreviewGrid');
+      if (!grid) return;
+
+      if (currentGalleryUrls.length === 0) {
+        grid.innerHTML = `<p class="col-span-3 text-[11px] text-stone-400 italic text-center py-3">Chưa có ảnh nào trong album</p>`;
+        return;
+      }
+
+      grid.innerHTML = currentGalleryUrls.map((url, idx) => `
+        <div class="relative group rounded-xl overflow-hidden border border-stone-200 bg-stone-100 h-24">
+          <img src="${url}" class="w-full h-full object-cover" alt="Album photo ${idx + 1}" />
+          <button type="button" onclick="removeGalleryItem(${idx})" title="Xóa ảnh này" 
+                  class="absolute top-1.5 right-1.5 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow-md transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function updateQrPreview() {
+      const bankId = document.getElementById('inputBankId').value;
+      const accountNo = document.getElementById('inputAccountNo').value.trim();
+      const accountName = document.getElementById('inputAccountName').value.trim();
+      const addInfo = document.getElementById('inputAddInfo').value.trim();
+      const amount = document.getElementById('inputAmount').value;
+
+      document.getElementById('qrPreviewImg').src = buildVietQrUrl(bankId, accountNo, accountName, amount, addInfo);
+    }
+
+    function saveConfig(e) {
+      e.preventDefault();
+      const bankId = document.getElementById('inputBankId').value;
+      const bankObj = VIETNAM_BANKS.find(b => b.bin === bankId);
+
+      config = {
+        hostName: document.getElementById('inputHostName').value.trim(),
+        eventTitle: document.getElementById('inputEventTitle').value.trim(),
+        greetingQuote: document.getElementById('inputGreetingQuote').value.trim(),
+        eventDateISO: document.getElementById('inputEventDateISO').value,
+        eventDateText: document.getElementById('inputEventDateText').value.trim(),
+        lunarDateText: document.getElementById('inputLunarDateText').value.trim(),
+        locationName: document.getElementById('inputLocationName').value.trim(),
+        locationAddress: document.getElementById('inputLocationAddress').value.trim(),
+        googleMapsUrl: document.getElementById('inputGoogleMapsUrl').value.trim(),
+        avatarUrl: document.getElementById('inputAvatarUrl').value,
+        galleryUrls: currentGalleryUrls,
+        musicUrl: config.musicUrl || "",
+        qr: {
+          bankId: bankId,
+          bankName: bankObj ? bankObj.name : "",
+          accountNo: document.getElementById('inputAccountNo').value.trim(),
+          accountName: document.getElementById('inputAccountName').value.trim().toUpperCase(),
+          addInfo: document.getElementById('inputAddInfo').value.trim(),
+          amount: document.getElementById('inputAmount').value
+        }
+      };
+
+      localStorage.setItem('birthday_invitation_config', JSON.stringify(config));
+      showToast("Đã lưu tất cả thay đổi thành công! 🎉", "success");
+      setTimeout(() => switchRoute('/'), 800);
+    }
+
+    function resetToDefaultConfig() {
+      if (confirm("Bạn có chắc chắn muốn khôi phục cấu hình mặc định ban đầu?")) {
+        config = DEFAULT_CONFIG;
+        localStorage.removeItem('birthday_invitation_config');
+        populateEditForm();
+        showToast("Đã khôi phục dữ liệu mặc định", "info");
+      }
+    }
+
+    // 7. GỬI MỜI & TẠO LINK (VIEW SEND)
+    function getBaseUrl() {
+      const loc = window.location;
+      return loc.origin + loc.pathname;
+    }
+
+    function generateInviteLink() {
+      const guestInput = document.getElementById('sendGuestInput').value.trim();
+      const baseUrl = getBaseUrl();
+      const generatedField = document.getElementById('sendGeneratedUrl');
+
+      if (guestInput) {
+        generatedField.value = `${baseUrl}?to=${encodeURIComponent(guestInput)}`;
+      } else {
+        generatedField.value = baseUrl;
+      }
+    }
+
+    function copyGeneratedLink() {
+      const urlField = document.getElementById('sendGeneratedUrl');
+      urlField.select();
+      navigator.clipboard.writeText(urlField.value).then(() => {
+        showToast("Đã sao chép đường link mời thành công!", "success");
+      }).catch(() => {
+        document.execCommand('copy');
+        showToast("Đã sao chép đường link!", "success");
+      });
+    }
+
+    function previewGuestCard() {
+      const link = document.getElementById('sendGeneratedUrl').value;
+      window.open(link, '_blank');
+    }
+
+    function saveAndCopyGuestLink() {
+      const name = document.getElementById('sendGuestInput').value.trim();
+      const link = document.getElementById('sendGeneratedUrl').value;
+      if (!name) {
+        showToast("Vui lòng nhập tên khách mời!", "warning");
+        return;
+      }
+
+      copyGeneratedLink();
+
+      // Lưu lịch sử
+      const existing = invitedGuests.find(g => g.name === name);
+      if (!existing) {
+        invitedGuests.unshift({ name, link, time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) });
+        localStorage.setItem('invited_guests_list', JSON.stringify(invitedGuests));
+        renderInvitedGuests();
+      }
+    }
+
+    function renderInvitedGuests() {
+      const container = document.getElementById('invitedGuestsList');
+      if (invitedGuests.length === 0) {
+        container.innerHTML = `<p class="text-xs text-stone-400 text-center py-4 italic">Chưa có link mời nào được lưu</p>`;
+        return;
+      }
+
+      container.innerHTML = invitedGuests.map((g, idx) => `
+        <div class="p-3 bg-white rounded-xl border border-stone-200/80 shadow-2xs flex items-center justify-between gap-2">
+          <div class="truncate">
+            <p class="text-xs font-bold text-stone-800">${g.name}</p>
+            <p class="text-[10px] text-pink-600 font-mono truncate">${g.link}</p>
+          </div>
+          <div class="flex items-center gap-1">
+            <button onclick="copySpecificLink('${g.link}')" title="Sao chép link" class="w-7 h-7 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-copy"></i>
+            </button>
+            <button onclick="removeGuest(${idx})" title="Xóa" class="w-7 h-7 rounded-lg bg-stone-100 text-stone-400 hover:text-rose-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function copySpecificLink(link) {
+      navigator.clipboard.writeText(link).then(() => {
+        showToast("Đã sao chép link mời!", "success");
+      });
+    }
+
+    function removeGuest(idx) {
+      invitedGuests.splice(idx, 1);
+      localStorage.setItem('invited_guests_list', JSON.stringify(invitedGuests));
+      renderInvitedGuests();
+    }
+
+    function clearInvitedGuests() {
+      if (confirm("Bạn muốn xóa toàn bộ danh sách link mời đã lưu?")) {
+        invitedGuests = [];
+        localStorage.removeItem('invited_guests_list');
+        renderInvitedGuests();
+      }
+    }
+
+    // SHARE ACTIONS
+    function shareViaZalo() {
+      const link = document.getElementById('sendGeneratedUrl').value;
+      window.open(`https://zalo.me/share?url=${encodeURIComponent(link)}`, '_blank');
+    }
+    function shareViaMessenger() {
+      const link = document.getElementById('sendGeneratedUrl').value;
+      window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(link)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(link)}`, '_blank');
+    }
+    function shareViaSMS() {
+      const name = document.getElementById('sendGuestInput').value.trim();
+      const link = document.getElementById('sendGeneratedUrl').value;
+      const text = `Thân mời ${name || 'bạn'} tới dự tiệc sinh nhật của mình tại: ${link}`;
+      window.open(`sms:?body=${encodeURIComponent(text)}`);
+    }
+
+    // 8. SỔ LƯU BÚT
+    function renderWishes() {
+      const container = document.getElementById('wishesList');
+      container.innerHTML = wishes.map(w => `
+        <div class="p-3 bg-white rounded-xl border border-pink-100 text-xs shadow-2xs">
+          <div class="flex justify-between items-center text-stone-400 mb-1">
+            <span class="font-bold text-pink-600">${w.name}</span>
+            <span class="text-[10px]">${w.time}</span>
+          </div>
+          <p class="text-stone-700 leading-relaxed">${w.text}</p>
+        </div>
+      `).join('');
+    }
+
+    function submitWish(e) {
+      e.preventDefault();
+      const author = document.getElementById('wishAuthor').value.trim();
+      const msg = document.getElementById('wishMessage').value.trim();
+      if (!author || !msg) return;
+
+      wishes.unshift({ name: author, text: msg, time: "Vừa xong" });
+      localStorage.setItem('birthday_wishes', JSON.stringify(wishes));
+      renderWishes();
+      document.getElementById('wishMessage').value = '';
+      showToast("Cảm ơn lời chúc ngọt ngào của bạn! 💕", "success");
+    }
+
+    // 9. TOAST NOTIFICATION UTILITY
+    function showToast(message, type = "success") {
+      const toast = document.getElementById('toastNotification');
+      const msgSpan = document.getElementById('toastMessage');
+      const icon = document.getElementById('toastIcon');
+
+      msgSpan.innerText = message;
+      if (type === "success") icon.className = "fa-solid fa-circle-check text-emerald-400";
+      else if (type === "warning") icon.className = "fa-solid fa-triangle-exclamation text-amber-400";
+      else icon.className = "fa-solid fa-circle-info text-blue-400";
+
+      toast.classList.remove('hidden');
+      toast.classList.add('flex', 'animate-toast');
+
+      setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.classList.remove('flex', 'animate-toast');
+      }, 2800);
+    }
+
+    // 10. LISTEN ROUTE CHANGES & INITIALIZE
+    window.addEventListener('hashchange', renderView);
+    window.addEventListener('DOMContentLoaded', () => {
+      renderView();
+    });
+  </script>
+</body>
+
+</html>
