@@ -683,12 +683,14 @@
 
         <!-- NÚT MỞ APP NGÂN HÀNG & THAO TÁC NHANH -->
         <div class="mt-4 space-y-2">
-          <a id="modalOpenBankAppBtn" href="#" target="_blank"
+          <!-- Nút Mở App Ngân Hàng qua Cổng VietQR Universal Gateway -->
+          <a id="modalUniversalQrBtn" href="#" target="_blank"
             class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 active:scale-[0.99]">
             <i class="fa-solid fa-mobile-screen-button text-sm"></i> Mở App
           </a>
 
-          <div class="grid grid-cols-2 gap-2">
+          <!-- Nút Phụ: Sao chép STK & Tải ảnh QR -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
             <button type="button" onclick="copyAccountNo()"
               class="py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-1.5 active:scale-95">
               <i class="fa-solid fa-copy text-pink-500"></i> Sao Chép STK
@@ -795,7 +797,7 @@
     }
 
     function promptForPasscode() {
-      const inputPass = prompt("🔒 Vui lòng nhập mật khẩu quản trị để tiếp tục (Ví dụ: 2003):");
+      const inputPass = prompt("🔒 Vui lòng nhập mật khẩu để quản lí thiệp");
       if (inputPass === '2003') {
         sessionStorage.setItem('partyinvi_pass', '2003');
         showToast("Xác thực quản trị thành công! 🎉", "success");
@@ -989,6 +991,27 @@
     setInterval(updateCountdown, 1000);
 
     // 5. VIETQR GENERATOR API & MODAL & QUICK BANK ACTIONS
+    const BANK_BIN_TO_SLUG = {
+      "970422": "mb",      // MBBank
+      "970436": "vcb",     // Vietcombank
+      "970407": "tcb",     // Techcombank
+      "970432": "vpb",     // VPBank
+      "970416": "acb",     // ACB
+      "970418": "bidv",    // BIDV
+      "970405": "varb",    // Agribank
+      "970415": "ctg",     // VietinBank
+      "970423": "tpb",     // TPBank
+      "970403": "stb",     // Sacombank
+      "970437": "hdb",     // HDBank
+      "970448": "ocb",     // OCB
+      "970426": "msb",     // MSB
+      "970441": "vib",     // VIB
+      "970443": "shb",     // SHB
+      "970431": "eib",     // Eximbank
+      "970440": "seab",    // SeABank
+      "970428": "nab"      // Nam A Bank
+    };
+
     function buildVietQrUrl(bankBin, accountNo, accountName, amount, addInfo) {
       const encName = encodeURIComponent(accountName || "");
       const encInfo = encodeURIComponent(addInfo || "");
@@ -1028,11 +1051,22 @@
       document.getElementById('modalAccountName').innerText = qrData.accountName;
       document.getElementById('modalQrImg').src = buildVietQrUrl(qrData.bankId, qrData.accountNo, qrData.accountName, qrData.amount, qrData.addInfo);
 
-      // Link mở ứng dụng Ngân hàng VietQR Deeplink chuẩn
-      const openAppUrl = `https://dl.vietqr.io/pay?app=${qrData.bankId}&ba=${qrData.accountNo}&am=${qrData.amount || 0}&tn=${encodeURIComponent(qrData.addInfo || '')}`;
-      const openAppBtn = document.getElementById('modalOpenBankAppBtn');
-      if (openAppBtn) {
-        openAppBtn.href = openAppUrl;
+      const bankSlug = BANK_BIN_TO_SLUG[qrData.bankId] || "mb";
+
+      // Cấu trúc ba: [bankId]@[accountNo] (ví dụ: 970422@0347830406 hoặc mb@0347830406)
+      const bankAccountParam = `${qrData.bankId || bankSlug}@${qrData.accountNo}`;
+      const transferNote = encodeURIComponent(qrData.addInfo || '');
+      const amount = qrData.amount || 0;
+
+      // Link mở Cổng VietQR Deep Link chính thức
+      const payUrl = `https://dl.vietqr.io/pay?app=${bankSlug}&ba=${bankAccountParam}&am=${amount}&tn=${transferNote}`;
+
+      const universalBtn = document.getElementById('modalUniversalQrBtn');
+      if (universalBtn) {
+        universalBtn.href = payUrl;
+        universalBtn.onclick = function () { 
+          copyAccountNo(); 
+        };
       }
     }
 
