@@ -152,11 +152,11 @@
           <i class="fa-solid fa-envelope-open"></i> <span class="hidden sm:inline">Thiệp</span>
         </button>
         <button id="navBtn-send" onclick="switchRoute('/send')"
-          class="px-3 py-1.5 rounded-full transition-all text-stone-600 hover:text-pink-600 flex items-center gap-1">
+          class="hidden px-3 py-1.5 rounded-full transition-all text-stone-600 hover:text-pink-600 flex items-center gap-1">
           <i class="fa-solid fa-paper-plane"></i> <span>Gửi Mời</span>
         </button>
         <button id="navBtn-edit" onclick="switchRoute('/edit')"
-          class="px-3 py-1.5 rounded-full transition-all text-stone-600 hover:text-pink-600 flex items-center gap-1">
+          class="hidden px-3 py-1.5 rounded-full transition-all text-stone-600 hover:text-pink-600 flex items-center gap-1">
           <i class="fa-solid fa-sliders"></i> <span>Sửa Thiệp</span>
         </button>
       </nav>
@@ -228,7 +228,7 @@
             <h1 id="cardHostName" class="text-3xl font-serif-title font-bold text-white drop-shadow-md">Bảo Uyên</h1>
             <p id="cardEventTitle" class="text-sm text-pink-100 font-semibold mt-1 drop-shadow">Mừng Tiệc Sinh Nhật 2
               Tuổi</p>
-            <p id="cardEventDateShort" class="text-xs text-stone-200 font-medium mt-1">18:00 • 15 . 09 . 2026</p>
+            <p id="cardEventDateShort" class="text-xs text-stone-200 font-medium mt-1">17:00 • 30 . 08 . 2026</p>
           </div>
         </div>
 
@@ -350,8 +350,8 @@
 
         <!-- Footer chân trang -->
         <footer class="text-center text-[11px] text-stone-400 pt-6 pb-4 border-t border-stone-100">
-          <p class="font-semibold text-stone-500">Made with ❤️ for Your Birthday Party</p>
-          <p class="mt-0.5">Online Invitation Static Web App</p>
+          <p class="font-semibold text-stone-500">Made with Tri Vo</p>
+          <p class="mt-0.5">Contact: <a href="mailto:[voquangtri2708@gmail.com]">voquangtri2708@gmail.com</a></p>
         </footer>
       </div>
     </main>
@@ -375,7 +375,7 @@
 
           <div>
             <label class="block text-xs font-bold text-stone-700 mb-1">Tên chủ nhân tiệc</label>
-            <input type="text" id="inputHostName" placeholder="Ví dụ: Gia Bảo" required
+            <input type="text" id="inputHostName" placeholder="Ví dụ: Bảo Uyên" required
               class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
           </div>
 
@@ -401,11 +401,13 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-bold text-stone-700 mb-1">Ngày & Giờ (Dùng đếm ngược ISO)</label>
-              <input type="datetime-local" id="inputEventDateISO" required
+              <input type="datetime-local" id="inputEventDateISO" oninput="autoFormatDateText()"
+                onchange="autoFormatDateText()" required
                 class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
             </div>
             <div>
-              <label class="block text-xs font-bold text-stone-700 mb-1">Dòng thời gian hiển thị</label>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Dòng thời gian hiển thị (Tự động theo đếm
+                ngược)</label>
               <input type="text" id="inputEventDateText" placeholder="18:00 • Thứ Ba, 15/09/2026" required
                 class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
             </div>
@@ -708,16 +710,16 @@
 
     // 2. CONFIG MẶC ĐỊNH MỪNG SINH NHẬT
     const DEFAULT_CONFIG = {
-      hostName: "Gia Bảo",
-      eventTitle: "Mừng Tiệc Sinh Nhật 20 Tuổi",
-      greetingQuote: "Tuổi mới rực rỡ, thêm nhiều niềm vui và những hành trình mới tươi đẹp!",
-      eventDateISO: "2026-09-15T18:00",
-      eventDateText: "18:00 • Thứ Ba, 15/09/2026",
-      lunarDateText: "(Nhằm ngày 05 tháng 8 năm Bính Ngọ)",
-      locationName: "Nhà Hàng & Rooftop Lounge",
-      locationAddress: "123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-      googleMapsUrl: "https://maps.google.com/?q=Nguyen+Hue+Walker+Street+District+1+HCMC",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=800&auto=format&fit=crop",
+      hostName: "Bảo Uyên",
+      eventTitle: "Mừng Tiệc Sinh Nhật 2 Tuổi",
+      greetingQuote: "Bước sang tuổi mới, chúc em luôn khỏe mạnh, ngoan ngoãn, hay ăn chóng lớn và luôn nhận được thật nhiều tình yêu thương từ mọi người xung quanh nhé!",
+      eventDateISO: "2026-08-30T18:00",
+      eventDateText: "18:00 • Chủ Nhật, 30/08/2026",
+      lunarDateText: "(Nhằm ngày 25 tháng 7 năm Bính Ngọ)",
+      locationName: "Tư gia",
+      locationAddress: "Phước Bình - Bình Phước",
+      googleMapsUrl: "https://maps.google.com/?q=Phuoc+Binh+Binh+Phuoc+vn",
+      avatarUrl: "./assets/IMG_8400.JPG",
       galleryUrls: [
         "https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=500&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?q=80&w=500&auto=format&fit=crop",
@@ -728,10 +730,10 @@
       qr: {
         bankId: "970422",
         bankName: "MBBank",
-        accountNo: "0987654321",
-        accountName: "NGUYEN GIA BAO",
+        accountNo: "0347830406",
+        accountName: "VO QUANG TRI",
         amount: "",
-        addInfo: "Mung sinh nhat Gia Bao"
+        addInfo: "Mung sinh nhat Bao Uyen"
       }
     };
 
@@ -743,7 +745,43 @@
     ];
     let invitedGuests = JSON.parse(localStorage.getItem('invited_guests_list')) || [];
 
-    // 3. ROUTER CLIENT-SIDE (Hỗ trợ /, /edit, /send, #/edit, #/send, ?page=edit)
+    // 3. BẢO MẬT & ROUTER CLIENT-SIDE (Mật khẩu pass=2003)
+    function isPasscodeValid() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('pass') === '2003') {
+        sessionStorage.setItem('partyinvi_pass', '2003');
+        return true;
+      }
+      return sessionStorage.getItem('partyinvi_pass') === '2003';
+    }
+
+    function updateAuthUI() {
+      const isAuth = isPasscodeValid();
+      const btnSend = document.getElementById('navBtn-send');
+      const btnEdit = document.getElementById('navBtn-edit');
+
+      if (isAuth) {
+        btnSend.classList.remove('hidden');
+        btnEdit.classList.remove('hidden');
+      } else {
+        btnSend.classList.add('hidden');
+        btnEdit.classList.add('hidden');
+      }
+    }
+
+    function promptForPasscode() {
+      const inputPass = prompt("🔒 Vui lòng nhập mật khẩu quản trị để tiếp tục (Ví dụ: 2003):");
+      if (inputPass === '2003') {
+        sessionStorage.setItem('partyinvi_pass', '2003');
+        showToast("Xác thực quản trị thành công! 🎉", "success");
+        updateAuthUI();
+        return true;
+      } else if (inputPass !== null) {
+        showToast("Mật khẩu không chính xác!", "warning");
+      }
+      return false;
+    }
+
     function getCurrentRoute() {
       const path = window.location.pathname;
       const hash = window.location.hash;
@@ -764,6 +802,8 @@
     }
 
     function renderView() {
+      updateAuthUI();
+
       const route = getCurrentRoute();
       const viewHome = document.getElementById('view-home');
       const viewEdit = document.getElementById('view-edit');
@@ -772,6 +812,15 @@
       const btnHome = document.getElementById('navBtn-home');
       const btnSend = document.getElementById('navBtn-send');
       const btnEdit = document.getElementById('navBtn-edit');
+
+      // Kiểm tra mật khẩu quản trị cho các route bảo mật
+      if ((route === '/edit' || route === '/send') && !isPasscodeValid()) {
+        const authenticated = promptForPasscode();
+        if (!authenticated) {
+          window.location.hash = '#/';
+          return renderView();
+        }
+      }
 
       // Reset styles
       [btnHome, btnSend, btnEdit].forEach(btn => {
@@ -941,6 +990,29 @@
         modal.classList.add('hidden');
         modal.classList.remove('flex');
       }
+    }
+
+    // TỰ ĐỘNG CHUYỂN ĐỔI NGÀY GIỜ ISO SANG DÒNG THỜI GIAN HIỂN THỊ
+    function autoFormatDateText() {
+      const isoVal = document.getElementById('inputEventDateISO').value;
+      if (!isoVal) return;
+
+      const dateObj = new Date(isoVal);
+      if (isNaN(dateObj.getTime())) return;
+
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+
+      const daysOfWeek = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+      const dayName = daysOfWeek[dateObj.getDay()];
+
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+
+      // Định dạng chuẩn: "18:00 • Thứ Ba, 15/09/2026"
+      const formattedText = `${hours}:${minutes} • ${dayName}, ${day}/${month}/${year}`;
+      document.getElementById('inputEventDateText').value = formattedText;
     }
 
     // 6. POPULATE FORM & SAVE CONFIG (VIEW EDIT)
@@ -1114,7 +1186,10 @@
     // 7. GỬI MỜI & TẠO LINK (VIEW SEND)
     function getBaseUrl() {
       const loc = window.location;
-      return loc.origin + loc.pathname;
+      const url = new URL(loc.href);
+      url.searchParams.delete('pass');
+      url.hash = '';
+      return url.origin + url.pathname;
     }
 
     function generateInviteLink() {
