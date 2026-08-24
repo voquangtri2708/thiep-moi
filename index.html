@@ -883,7 +883,7 @@
     function renderInvitationCard() {
       // Cover
       document.getElementById('coverHostTitle').innerText = config.eventTitle || "Mừng Sinh Nhật";
-      document.getElementById('coverHostSub').innerText = `Sinh Nhật ${config.hostName}`;
+      document.getElementById('coverHostSub').innerText = config.hostName;
 
       // Main Card
       document.getElementById('cardAvatar').src = config.avatarUrl || DEFAULT_CONFIG.avatarUrl;
@@ -1064,8 +1064,8 @@
       const universalBtn = document.getElementById('modalUniversalQrBtn');
       if (universalBtn) {
         universalBtn.href = payUrl;
-        universalBtn.onclick = function () { 
-          copyAccountNo(); 
+        universalBtn.onclick = function () {
+          copyAccountNo();
         };
       }
     }
