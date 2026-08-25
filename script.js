@@ -394,9 +394,77 @@ async function uploadToCloudinary(file) {
   return data.secure_url || data.url;
 }
 
+async function saveConfigOnline(configObj) {
+  try {
+    const { cloudName, uploadPreset, folder } = getCloudinaryConfig();
+    if (!cloudName || !uploadPreset) return;
+
+    const jsonStr = JSON.stringify(configObj, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+
+    const targetFolder = folder || 'album';
+    const publicId = `${targetFolder}/birthday_config.json`;
+
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`;
+    const formData = new FormData();
+    formData.append('file', blob, 'birthday_config.json');
+    formData.append('upload_preset', uploadPreset);
+    formData.append('public_id', publicId);
+
+    await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+    console.log(`⚡ Đã đồng bộ cấu hình thiệp vào thư mục ${publicId} trên Cloudinary thành công!`);
+  } catch (err) {
+    console.warn("Lỗi đồng bộ cấu hình online:", err);
+  }
+}
+
+async function loadConfigOnline() {
+  try {
+    const { cloudName, folder } = getCloudinaryConfig();
+    if (!cloudName) return;
+
+    const targetFolder = folder || 'album';
+    const path = `${targetFolder}/birthday_config.json`;
+    const configUrl = `https://res.cloudinary.com/${cloudName}/raw/upload/${path}?t=${Date.now()}`;
+    
+    let res = await fetch(configUrl);
+    if (!res.ok) {
+      const fallbackUrl = `https://res.cloudinary.com/${cloudName}/raw/upload/birthday_config.json?t=${Date.now()}`;
+      res = await fetch(fallbackUrl);
+    }
+    if (!res.ok) return;
+
+    const remoteConfig = await res.json();
+    if (remoteConfig && remoteConfig.galleryUrls && remoteConfig.galleryUrls.length > 0) {
+      config = {
+        ...DEFAULT_CONFIG,
+        ...remoteConfig,
+        qr: {
+          ...DEFAULT_CONFIG.qr,
+          ...(remoteConfig.qr || {})
+        }
+      };
+      try {
+        localStorage.setItem('birthday_invitation_config', JSON.stringify(config));
+      } catch (e) {}
+
+      renderInvitationCard();
+      if (document.getElementById('view-edit') && !document.getElementById('view-edit').classList.contains('hidden')) {
+        populateEditForm();
+      }
+    }
+  } catch (e) {
+    console.warn("Chưa nạp được config online:", e);
+  }
+}
+
 async function saveConfigToStorage(configObj) {
   try {
     localStorage.setItem('birthday_invitation_config', JSON.stringify(configObj));
+    saveConfigOnline(configObj);
   } catch (err) {
     console.warn("Storage write error:", err);
   }
@@ -1183,4 +1251,5 @@ function showToast(message, type = "success") {
 window.addEventListener('hashchange', renderView);
 window.addEventListener('DOMContentLoaded', () => {
   renderView();
+  loadConfigOnline();
 });
