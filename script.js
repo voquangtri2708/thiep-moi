@@ -461,10 +461,109 @@ async function loadConfigOnline() {
   }
 }
 
+function getSupabaseClient() {
+  const env = window.ENV || {};
+  const url = (env.SUPABASE_URL || "").trim();
+  const key = (env.SUPABASE_ANON_KEY || "").trim();
+
+  if (url && key && window.supabase) {
+    if (!window._supabaseInstance) {
+      window._supabaseInstance = window.supabase.createClient(url, key);
+    }
+    return window._supabaseInstance;
+  }
+  return null;
+}
+
+async function saveConfigToSupabase(configObj) {
+  const sb = getSupabaseClient();
+  if (!sb) return;
+
+  try {
+    const { error } = await sb.from('invitation_config').upsert({
+      id: 'main',
+      config_data: configObj,
+      updated_at: new Date().toISOString()
+    });
+
+    if (error) {
+      console.warn("Lỗi lưu Supabase:", error.message);
+    } else {
+      console.log("⚡ Đã đồng bộ cấu hình thiệp lên Supabase Database thành công!");
+    }
+  } catch (err) {
+    console.warn("Lỗi Supabase:", err);
+  }
+}
+
+async function loadConfigFromSupabase() {
+  const sb = getSupabaseClient();
+  if (!sb) return;
+
+  try {
+    const { data, error } = await sb.from('invitation_config').select('config_data').eq('id', 'main').single();
+
+    if (data && data.config_data && !error) {
+      const remoteConfig = data.config_data;
+      if (remoteConfig.galleryUrls && remoteConfig.galleryUrls.length > 0) {
+        config = {
+          ...DEFAULT_CONFIG,
+          ...remoteConfig,
+          qr: {
+            ...DEFAULT_CONFIG.qr,
+            ...(remoteConfig.qr || {})
+          }
+        };
+        try {
+          localStorage.setItem('birthday_invitation_config', JSON.stringify(config));
+        } catch (e) {}
+
+        renderInvitationCard();
+        if (document.getElementById('view-edit') && !document.getElementById('view-edit').classList.contains('hidden')) {
+          populateEditForm();
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Chưa nạp được config từ Supabase:", e);
+  }
+}
+
+async function loadWishesFromSupabase() {
+  const sb = getSupabaseClient();
+  if (!sb) return;
+
+  try {
+    const { data, error } = await sb.from('invitation_wishes').select('*').order('id', { ascending: false });
+    if (data && !error && data.length > 0) {
+      wishes = data.map(w => ({
+        name: w.name,
+        text: w.message,
+        time: w.created_at ? new Date(w.created_at).toLocaleDateString('vi-VN') : "Gần đây"
+      }));
+      renderWishes();
+    }
+  } catch (e) {
+    console.warn("Lỗi đọc lời chúc Supabase:", e);
+  }
+}
+
+async function submitWishToSupabase(name, message) {
+  const sb = getSupabaseClient();
+  if (!sb) return;
+
+  try {
+    await sb.from('invitation_wishes').insert([{ name, message }]);
+  } catch (e) {
+    console.warn("Lỗi gửi lời chúc Supabase:", e);
+  }
+}
+
 async function saveConfigToStorage(configObj) {
   try {
     localStorage.setItem('birthday_invitation_config', JSON.stringify(configObj));
     saveConfigOnline(configObj);
+    saveConfigToSupabase(configObj);
   } catch (err) {
     console.warn("Storage write error:", err);
   }
@@ -1223,6 +1322,7 @@ function submitWish(e) {
   wishes.unshift({ name: author, text: msg, time: "Vừa xong" });
   localStorage.setItem('birthday_wishes', JSON.stringify(wishes));
   renderWishes();
+  submitWishToSupabase(author, msg);
   document.getElementById('wishMessage').value = '';
   showToast("Cảm ơn lời chúc ngọt ngào của bạn! 💕", "success");
 }
@@ -1252,4 +1352,6 @@ window.addEventListener('hashchange', renderView);
 window.addEventListener('DOMContentLoaded', () => {
   renderView();
   loadConfigOnline();
+  loadConfigFromSupabase();
+  loadWishesFromSupabase();
 });
