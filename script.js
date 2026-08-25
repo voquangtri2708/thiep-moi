@@ -31,15 +31,11 @@ const DEFAULT_CONFIG = {
   lunarDateText: "(Nhằm ngày 25 tháng 7 năm Bính Ngọ)",
   locationName: "Tư gia",
   locationAddress: "Phước Bình - Bình Phước",
-  avatarUrl: "https://lh3.googleusercontent.com/d/1rlLfnpyWB7Znq4QPGxyt7LjPFWEmCmig",
+  avatarUrl: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=800&auto=format&fit=crop&q=80",
   galleryUrls: [
-    "https://lh3.googleusercontent.com/d/1rlLfnpyWB7Znq4QPGxyt7LjPFWEmCmig",
-    "https://lh3.googleusercontent.com/d/1aTFx1zM9MefWdewMk7QSWWwRYrD99eM3",
-    "https://lh3.googleusercontent.com/d/1Tpn9gJce_AtRcXEoVROsNalhK8jGlCWI",
-    "https://lh3.googleusercontent.com/d/1wmhtMbtQ9gju0KK8E4mhd3N458iNwj2G",
-    "https://lh3.googleusercontent.com/d/1mhFXiBqlbwGN5wsHIN76i7-AH2wfUI1h",
-    "https://lh3.googleusercontent.com/d/1xj7_mxoon1njBUFFNkydLGcCPxrfqRkr",
-    "https://lh3.googleusercontent.com/d/1FYjdutDAArMH3clXba6Ku8PpHlcRqNLv"
+    "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1512909006721-3d6018887383?w=800&auto=format&fit=crop&q=80"
   ],
   musicUrl: "https://cdn.pixabay.com/download/audio/2022/05/16/audio_db6591201e.mp3?filename=acoustic-guitars-ambient-uplifting-112191.mp3",
   qr: {
@@ -57,9 +53,25 @@ function loadStoredConfig() {
     const raw = localStorage.getItem('birthday_invitation_config');
     if (raw) {
       const parsed = JSON.parse(raw);
+      
+      // Lọc bỏ triệt để bất kỳ link Drive cũ nào còn dính trong localStorage
+      const isDriveUrl = (u) => u && (u.includes('googleusercontent.com') || u.includes('drive.google.com'));
+      
+      let cleanGallery = (parsed.galleryUrls || []).filter(u => !isDriveUrl(u));
+      if (cleanGallery.length === 0) {
+        cleanGallery = [...DEFAULT_CONFIG.galleryUrls];
+      }
+
+      let cleanAvatar = parsed.avatarUrl;
+      if (!cleanAvatar || isDriveUrl(cleanAvatar) || (!cleanGallery.includes(cleanAvatar) && !cleanAvatar.startsWith('data:'))) {
+        cleanAvatar = cleanGallery[0] || DEFAULT_CONFIG.avatarUrl;
+      }
+
       return {
         ...DEFAULT_CONFIG,
         ...parsed,
+        avatarUrl: cleanAvatar,
+        galleryUrls: cleanGallery,
         qr: {
           ...DEFAULT_CONFIG.qr,
           ...(parsed.qr || {})
@@ -264,6 +276,61 @@ function renderInvitationCard() {
   // Guest Name & Wishes
   initGuestName();
   renderWishes();
+}
+
+async function syncAndValidateCloudinaryImages(isSilent = false) {
+  if (!config.galleryUrls || config.galleryUrls.length === 0) return;
+
+  const syncBtnIcon = document.querySelector('button[onclick="syncAndValidateCloudinaryImages()"] i');
+  if (syncBtnIcon) syncBtnIcon.classList.add('animate-spin');
+
+  if (!isSilent) {
+    showToast("⚡ Đang kiểm tra & đồng bộ Album...", "info");
+  }
+
+  try {
+    const checkPromises = config.galleryUrls.map(async (url) => {
+      if (url.includes('res.cloudinary.com')) {
+        try {
+          const optUrl = convertGoogleDriveUrl(url);
+          const res = await fetch(optUrl, { method: 'HEAD' });
+          if (res.ok) return url;
+          console.warn("Ảnh đã bị xóa, loại bỏ khỏi album:", url);
+          return null;
+        } catch (e) {
+          return url;
+        }
+      }
+      return url;
+    });
+
+    const results = await Promise.all(checkPromises);
+    const validUrls = results.filter(u => u !== null);
+
+    if (validUrls.length !== config.galleryUrls.length) {
+      const removedCount = config.galleryUrls.length - validUrls.length;
+      config.galleryUrls = validUrls;
+      currentGalleryUrls = [...validUrls];
+
+      if (!validUrls.includes(config.avatarUrl)) {
+        config.avatarUrl = validUrls[0] || DEFAULT_CONFIG.avatarUrl;
+      }
+
+      saveConfigToStorage(config);
+      renderInvitationCard();
+      renderGalleryEditPreview();
+
+      if (!isSilent) {
+        showToast(`⚡ Đã đồng bộ! Tự động loại bỏ ${removedCount} ảnh đã bị xóa 🎉`, "success");
+      }
+    } else if (!isSilent) {
+      showToast("Tất cả ảnh trong Album đều hoạt động tốt! 🎉", "success");
+    }
+  } catch (err) {
+    console.warn("Lỗi đồng bộ album:", err);
+  } finally {
+    if (syncBtnIcon) syncBtnIcon.classList.remove('animate-spin');
+  }
 }
 
 function getCloudinaryConfig() {
@@ -501,9 +568,88 @@ function toggleGiftModal(show) {
   }
 }
 
-// TỰ ĐỘNG CHUYỂN ĐỔI NGÀY GIỜ ISO SANG DÒNG THỜI GIAN HIỂN THỊ
+// THUẬT TOÁN CHUYỂN ĐỔI NGÀY DƯƠNG SANG NGÀY ÂM LỊCH VIỆT NAM (GMT+7)
+function getVietnameseLunarDate(dd, mm, yy) {
+  const CAN = ['Giáp', 'Ất', 'Bính', 'Đinh', 'Mậu', 'Kỷ', 'Canh', 'Tân', 'Nhâm', 'Quý'];
+  const CHI = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
+
+  function jdFromDate(d, m, y) {
+    const a = Math.floor((14 - m) / 12);
+    const yAdj = y + 4800 - a;
+    const mAdj = m + 12 * a - 3;
+    return d + Math.floor((153 * mAdj + 2) / 5) + 365 * yAdj + Math.floor(yAdj / 4) - Math.floor(yAdj / 100) + Math.floor(yAdj / 400) - 32045;
+  }
+
+  function getNewMoonDay(k, timeZone = 7) {
+    const T = k / 1236.85;
+    const T2 = T * T;
+    const T3 = T2 * T;
+    const dr = Math.PI / 180;
+    let Jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * T2 - 0.000000155 * T3;
+    Jd1 += 0.00033 * Math.sin((166.56 + 132.87 * T - 0.00917 * T2) * dr);
+
+    const M = 359.2242 + 29.10535608 * k - 0.0000333 * T2 - 0.00000347 * T3;
+    const Mpr = 306.0253 + 385.81691806 * k + 0.0107306 * T2 + 0.00001236 * T3;
+    const F = 21.2964 + 390.67050646 * k - 0.0016528 * T2 - 0.00000239 * T3;
+
+    let C = (0.1734 - 0.000393 * T) * Math.sin(M * dr) + 0.0021 * Math.sin(2 * M * dr);
+    C = C - 0.4068 * Math.sin(Mpr * dr) + 0.0161 * Math.sin(2 * Mpr * dr);
+    C = C - 0.0004 * Math.sin(3 * Mpr * dr);
+    C = C + 0.0104 * Math.sin(2 * F * dr) - 0.0051 * Math.sin((M + Mpr) * dr);
+    C = C - 0.0074 * Math.sin((M - Mpr) * dr) + 0.0004 * Math.sin((2 * F + M) * dr);
+    C = C - 0.0004 * Math.sin((2 * F - M) * dr) - 0.0006 * Math.sin((2 * F + Mpr) * dr);
+    C = C + 0.0010 * Math.sin((2 * F - Mpr) * dr) + 0.0005 * Math.sin((M + 2 * Mpr) * dr);
+
+    return Math.floor(Jd1 + C + 0.5 + timeZone / 24);
+  }
+
+  function getSunLongitude(jdn, timeZone = 7) {
+    const T = (jdn - 2451545.0 - timeZone / 24) / 36525;
+    const T2 = T * T;
+    const dr = Math.PI / 180;
+    const M = 357.52910 + 35999.05030 * T - 0.0001559 * T2 - 0.00000048 * T * T2;
+    const L0 = 280.46645 + 36000.76983 * T + 0.0003032 * T2;
+    const DL = (1.914600 - 0.004817 * T - 0.000014 * T2) * Math.sin(M * dr)
+             + (0.019993 - 0.000101 * T) * Math.sin(2 * M * dr)
+             + 0.000290 * Math.sin(3 * M * dr);
+    let L = (L0 + DL) * dr;
+    L = L - 2 * Math.PI * Math.floor(L / (2 * Math.PI));
+    return Math.floor(L / (Math.PI / 6));
+  }
+
+  const dayNumber = jdFromDate(dd, mm, yy);
+  const k = Math.floor((dayNumber - 2415021.07699) / 29.53058868);
+
+  let monthStart = getNewMoonDay(k + 1);
+  if (monthStart > dayNumber) monthStart = getNewMoonDay(k);
+
+  let a11 = getNewMoonDay(Math.floor((jdFromDate(1, 11, yy - 1) - 2415021.07699) / 29.53058868));
+  if (getSunLongitude(a11) >= 9) {
+    a11 = getNewMoonDay(Math.floor((jdFromDate(1, 11, yy - 1) - 2415021.07699) / 29.53058868) + 1);
+  }
+
+  const lunarDay = dayNumber - monthStart + 1;
+  const diff = Math.floor((monthStart - a11) / 29);
+  let lunarMonth = diff + 11;
+  if (lunarMonth > 12) lunarMonth -= 12;
+
+  let lunarYear = yy;
+  if (lunarMonth >= 11 && diff < 2) lunarYear = yy - 1;
+
+  const yearCan = CAN[(lunarYear + 6) % 10];
+  const yearChi = CHI[(lunarYear + 8) % 12];
+
+  return {
+    day: lunarDay,
+    month: lunarMonth,
+    year: lunarYear,
+    canChiYear: `${yearCan} ${yearChi}`
+  };
+}
+
+// TỰ ĐỘNG CHUYỂN ĐỔI NGÀY GIỜ ISO SANG DÒNG THỜI GIAN & NGÀY ÂM LỊCH VIỆT NAM
 function autoFormatDateText() {
-  const isoVal = document.getElementById('inputEventDateISO').value;
+  const isoVal = document.getElementById('inputEventDateISO')?.value;
   if (!isoVal) return;
 
   const dateObj = new Date(isoVal);
@@ -515,13 +661,27 @@ function autoFormatDateText() {
   const daysOfWeek = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
   const dayName = daysOfWeek[dateObj.getDay()];
 
-  const day = String(dateObj.getDate()).padStart(2, '0');
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const year = dateObj.getFullYear();
+  const dayNum = dateObj.getDate();
+  const monthNum = dateObj.getMonth() + 1;
+  const yearNum = dateObj.getFullYear();
 
-  // Định dạng chuẩn: "18:00 • Thứ Ba, 15/09/2026"
-  const formattedText = `${hours}:${minutes} • ${dayName}, ${day}/${month}/${year}`;
-  document.getElementById('inputEventDateText').value = formattedText;
+  const dayStr = String(dayNum).padStart(2, '0');
+  const monthStr = String(monthNum).padStart(2, '0');
+
+  // 1. Tự động định dạng thời gian hiển thị: "18:00 • Chủ Nhật, 30/08/2026"
+  const formattedText = `${hours}:${minutes} • ${dayName}, ${dayStr}/${monthStr}/${yearNum}`;
+  const elDateText = document.getElementById('inputEventDateText');
+  if (elDateText) elDateText.value = formattedText;
+
+  // 2. Tự động tính Ngày Âm Lịch Việt Nam: "(Nhằm ngày 18 tháng 7 năm Bính Ngọ)"
+  try {
+    const lunar = getVietnameseLunarDate(dayNum, monthNum, yearNum);
+    const lunarText = `(Nhằm ngày ${lunar.day} tháng ${lunar.month} năm ${lunar.canChiYear})`;
+    const elLunarText = document.getElementById('inputLunarDateText');
+    if (elLunarText) elLunarText.value = lunarText;
+  } catch(e) {
+    console.warn("Lỗi tính ngày âm lịch:", e);
+  }
 }
 
 // 6. POPULATE FORM & SAVE CONFIG (VIEW EDIT)
@@ -657,17 +817,28 @@ function removeGalleryItem(event, index) {
   } else {
     showToast("Đã xóa ảnh. Album đang trống!", "warning");
   }
+  config.galleryUrls = currentGalleryUrls;
+  saveConfigToStorage(config);
   renderGalleryEditPreview();
 }
 
 function addGalleryUrlFromPrompt() {
-  const rawUrl = prompt("Dán link ảnh (Hỗ trợ link Google Drive hoặc link Web):");
+  const rawUrl = prompt("Dán link ảnh Cloudinary hoặc link Web:");
   if (rawUrl && rawUrl.trim()) {
     const convertedUrl = convertGoogleDriveUrl(rawUrl.trim());
     currentGalleryUrls.push(convertedUrl);
+    config.galleryUrls = currentGalleryUrls;
+    saveConfigToStorage(config);
     renderGalleryEditPreview();
-    showToast("Đã thêm ảnh vào album!", "success");
+    showToast("Đã thêm ảnh vào album thành công!", "success");
   }
+}
+
+function logoutAdmin() {
+  sessionStorage.removeItem('partyinvi_pass');
+  showToast("Đã đăng xuất quyền quản trị!", "info");
+  window.location.hash = '#/';
+  renderView();
 }
 
 async function syncGoogleDriveFolder(folderType = 'gallery') {
@@ -714,7 +885,7 @@ async function handleAvatarUpload(event) {
   if (!file) return;
 
   try {
-    showToast("Đang tải ảnh lên Cloudinary CDN...", "info");
+    showToast("Đang tải ảnh lên...", "info");
     const cloudinaryUrl = await uploadToCloudinary(file);
     config.avatarUrl = cloudinaryUrl;
     if (!currentGalleryUrls.includes(cloudinaryUrl)) {
@@ -723,9 +894,9 @@ async function handleAvatarUpload(event) {
     const avatarInput = document.getElementById('inputAvatarUrl');
     if (avatarInput) avatarInput.value = cloudinaryUrl;
     renderGalleryEditPreview();
-    showToast("Đã tải & chọn Ảnh Bìa Cloudinary thành công! 🎉", "success");
+    showToast("Đã tải & chọn Ảnh Bìa thành công! 🎉", "success");
   } catch (err) {
-    showToast(err.message || "Lỗi khi tải ảnh lên Cloudinary!", "warning");
+    showToast(err.message || "Lỗi khi tải ảnh!", "warning");
   }
 }
 
@@ -733,7 +904,7 @@ async function handleGalleryUpload(event) {
   const files = Array.from(event.target.files);
   if (files.length === 0) return;
 
-  showToast(`Đang tải ${files.length} ảnh lên Cloudinary CDN...`, "info");
+  showToast(`Đang tải ${files.length} ảnh lên album...`, "info");
   let successCount = 0;
 
   for (const file of files) {
@@ -742,8 +913,8 @@ async function handleGalleryUpload(event) {
       currentGalleryUrls.unshift(cloudinaryUrl);
       successCount++;
     } catch (err) {
-      console.error("Lỗi upload Cloudinary:", err);
-      showToast(err.message || "Lỗi khi tải ảnh lên Cloudinary!", "warning");
+      console.error("Lỗi upload:", err);
+      showToast(err.message || "Lỗi khi tải ảnh!", "warning");
     }
   }
 
@@ -754,7 +925,7 @@ async function handleGalleryUpload(event) {
     }
     saveConfigToStorage(config);
     renderGalleryEditPreview();
-    showToast(`⚡ Đã tải ${successCount} ảnh lên Cloudinary thành công! 🎉`, "success");
+    showToast(`⚡ Đã tải ${successCount} ảnh lên album thành công! 🎉`, "success");
   }
 }
 
