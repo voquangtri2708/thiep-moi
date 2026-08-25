@@ -1,0 +1,12 @@
+# Bảo mật biến môi trường & bí mật
+.env
+.env.local
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Dependencies (nếu có)
+node_modules/
+dist/

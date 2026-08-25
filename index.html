@@ -413,11 +413,11 @@
                 onchange="autoFormatDateText()" required
                 class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
             </div>
-            <!-- <div>
+            <div>
               <label class="block text-xs font-bold text-stone-700 mb-1">Dòng thời gian hiển thị</label>
               <input type="text" id="inputEventDateText" placeholder="18:00 • Thứ Ba, 15/09/2026" required
                 class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:border-pink-500 focus:outline-none" />
-            </div> -->
+            </div>
           </div>
 
           <div>
@@ -446,63 +446,65 @@
           </div>
         </div>
 
-        <!-- SECTION 3: HÌNH ẢNH THIỆP & ALBUM -->
+        <!-- SECTION 3: CẤU HÌNH CLOUDINARY & ALBUM ẢNH -->
         <div class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
-              <i class="fa-solid fa-image"></i> 3. Hình Ảnh Thiệp & Album
-            </h3>
-            <button type="button" onclick="syncAllDriveFolders()"
-              class="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs px-3 py-1.5 rounded-xl font-bold border border-emerald-200 shadow-xs transition">
-              <i class="fa-solid fa-rotate text-emerald-600"></i> Đồng Bộ Ảnh Từ Drive
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
+                <i class="fa-solid fa-cloud-arrow-up"></i> 3. Cấu Hình Cloudinary CDN & Album
+              </h3>
+              <p class="text-[10px] text-stone-400 mt-0.5">Tải ảnh trực tiếp lên Cloudinary CDN siêu tốc. Bấm vào ảnh để
+                chọn làm Ảnh Bìa Thiệp.</p>
+            </div>
+          </div>
+
+          <!-- Các ô cấu hình Cloudinary (Cloud Name, Upload Preset, Folder) -->
+          <div class="bg-stone-50 p-3 rounded-xl border border-stone-200/70 space-y-2.5">
+            <span class="text-[11px] font-bold text-stone-600 uppercase tracking-wider flex items-center gap-1">
+              <i class="fa-solid fa-gear text-pink-500"></i> Cấu Hình Môi Trường Cloudinary
+            </span>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label class="block text-[11px] font-bold text-stone-600 mb-0.5">Cloud Name</label>
+                <input type="text" id="inputCloudName" placeholder="Tên Cloud Name"
+                  onchange="saveCloudinaryEnvSettings()"
+                  class="w-full px-2.5 py-1.5 text-xs border border-stone-300 rounded-lg focus:border-pink-500 focus:outline-none font-mono" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-stone-600 mb-0.5">Upload Preset (Unsigned)</label>
+                <input type="text" id="inputUploadPreset" placeholder="Tên Upload Preset"
+                  onchange="saveCloudinaryEnvSettings()"
+                  class="w-full px-2.5 py-1.5 text-xs border border-stone-300 rounded-lg focus:border-pink-500 focus:outline-none font-mono" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-stone-600 mb-0.5">Folder Name (Thư mục)</label>
+                <input type="text" id="inputCloudinaryFolder" placeholder="birthday_invitation"
+                  onchange="saveCloudinaryEnvSettings()"
+                  class="w-full px-2.5 py-1.5 text-xs border border-stone-300 rounded-lg focus:border-pink-500 focus:outline-none font-mono" />
+              </div>
+            </div>
+            <p class="text-[10px] text-stone-400 italic">Có thể tùy chỉnh thông số trên hoặc điền vào tệp `.env` /
+              `env.js`</p>
+          </div>
+
+          <input type="hidden" id="inputAvatarUrl" />
+
+          <!-- Multi-action bar for Cloudinary Upload -->
+          <div class="flex items-center gap-2 pt-1">
+            <label
+              class="cursor-pointer inline-flex items-center gap-1.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:opacity-95 text-white text-xs px-3.5 py-2 rounded-xl font-bold shadow-xs transition">
+              <i class="fa-solid fa-cloud-arrow-up text-sm"></i> Tải Ảnh Lên
+              <input type="file" accept="image/*" multiple class="hidden" onchange="handleGalleryUpload(event)" />
+            </label>
+            <button type="button" onclick="addGalleryUrlFromPrompt()"
+              class="inline-flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs px-3 py-2 rounded-xl font-semibold transition">
+              <i class="fa-solid fa-link"></i> Thêm Link Ảnh Web
             </button>
           </div>
 
-          <!-- Ảnh Đại Diện Thiệp (Ảnh Bìa) -->
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <div>
-                <label class="block text-xs font-bold text-stone-700">Ảnh Đại Diện Thiệp (Ảnh Bìa)</label>
-                <p class="text-[10px] text-stone-400">Click trực tiếp vào tấm ảnh bạn thích nhất để chọn làm Ảnh Bìa</p>
-              </div>
-              <div>
-                <a href="https://drive.google.com/drive/folders/1OWYzYN19tzXOa_vyjI-l78BH5NzuwUhm?usp=sharing"
-                  target="_blank" rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition shadow-xs">
-                  <i class="fa-brands fa-google-drive text-sm"></i> Thư Mục Drive Bìa
-                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-80"></i>
-                </a>
-              </div>
-            </div>
-            <input type="hidden" id="inputAvatarUrl" />
-
-            <!-- Preview Grid cho Ảnh Bìa -->
-            <div id="avatarEditPreviewGrid" class="grid grid-cols-3 gap-2 mt-3">
-              <!-- Rendered via JS -->
-            </div>
-          </div>
-
-          <!-- Album Ảnh Kỷ Niệm -->
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <div>
-                <label class="block text-xs font-bold text-stone-700">Album Ảnh Kỷ Niệm</label>
-                <p class="text-[10px] text-stone-400">Quản lý & đồng bộ từ thư mục Google Drive</p>
-              </div>
-              <div>
-                <a href="https://drive.google.com/drive/folders/1yfsn0yVuerDDRzyQmmEyytwQNGIrmPx-?usp=sharing"
-                  target="_blank" rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition shadow-xs">
-                  <i class="fa-brands fa-google-drive text-sm"></i> Thư Mục Drive Album
-                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-80"></i>
-                </a>
-              </div>
-            </div>
-
-            <!-- Preview Grid cho Album -->
-            <div id="galleryEditPreviewGrid" class="grid grid-cols-3 gap-2 mt-3">
-              <!-- Rendered via JS -->
-            </div>
+          <!-- Preview Grid cho Album (có nút chọn làm Ảnh Bìa) -->
+          <div id="galleryEditPreviewGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3.5 mt-3">
+            <!-- Rendered via JS -->
           </div>
         </div>
 
@@ -725,7 +727,8 @@
 
   </div>
 
-  <!-- SCRIPT LOGIC XỬ LÝ TOÀN BỘ WEB APP -->
+  <!-- SCRIPT CẤU HÌNH MÔI TRƯỜNG & LOGIC XỬ LÝ TOÀN BỘ WEB APP -->
+  <script src="env.js"></script>
   <script src="script.js"></script>
 </body>
 

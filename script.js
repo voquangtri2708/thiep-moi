@@ -32,10 +32,8 @@ const DEFAULT_CONFIG = {
   locationName: "Tư gia",
   locationAddress: "Phước Bình - Bình Phước",
   avatarUrl: "https://lh3.googleusercontent.com/d/1rlLfnpyWB7Znq4QPGxyt7LjPFWEmCmig",
-  coverUrls: [
-    "https://lh3.googleusercontent.com/d/1rlLfnpyWB7Znq4QPGxyt7LjPFWEmCmig"
-  ],
   galleryUrls: [
+    "https://lh3.googleusercontent.com/d/1rlLfnpyWB7Znq4QPGxyt7LjPFWEmCmig",
     "https://lh3.googleusercontent.com/d/1aTFx1zM9MefWdewMk7QSWWwRYrD99eM3",
     "https://lh3.googleusercontent.com/d/1Tpn9gJce_AtRcXEoVROsNalhK8jGlCWI",
     "https://lh3.googleusercontent.com/d/1wmhtMbtQ9gju0KK8E4mhd3N458iNwj2G",
@@ -54,8 +52,28 @@ const DEFAULT_CONFIG = {
   }
 };
 
+function loadStoredConfig() {
+  try {
+    const raw = localStorage.getItem('birthday_invitation_config');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        ...DEFAULT_CONFIG,
+        ...parsed,
+        qr: {
+          ...DEFAULT_CONFIG.qr,
+          ...(parsed.qr || {})
+        }
+      };
+    }
+  } catch (e) {
+    console.warn("Lỗi đọc config từ localStorage:", e);
+  }
+  return { ...DEFAULT_CONFIG };
+}
+
 // Global state
-let config = JSON.parse(localStorage.getItem('birthday_invitation_config')) || DEFAULT_CONFIG;
+let config = loadStoredConfig();
 let wishes = (JSON.parse(localStorage.getItem('birthday_wishes')) || [])
   .filter(w => w.name !== "Bạn Minh" && w.name !== "Chị Thảo");
 let invitedGuests = JSON.parse(localStorage.getItem('invited_guests_list')) || [];
@@ -172,6 +190,7 @@ function convertGoogleDriveUrl(url) {
   if (!url || typeof url !== 'string') return url;
   url = url.trim();
 
+  // 1. Google Drive URL Conversion
   const fileDMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (fileDMatch && fileDMatch[1]) {
     return `https://lh3.googleusercontent.com/d/${fileDMatch[1]}`;
@@ -182,114 +201,130 @@ function convertGoogleDriveUrl(url) {
     return `https://lh3.googleusercontent.com/d/${idParamMatch[1]}`;
   }
 
+  // 2. Cloudinary Auto-Format CDN (Tự động chuyển đổi định dạng HEIC/PNG sang JPG/WebP tương thích trình duyệt)
+  if (url.includes('res.cloudinary.com')) {
+    let optUrl = url;
+    if (optUrl.includes('/upload/') && !optUrl.includes('/f_auto,q_auto/')) {
+      optUrl = optUrl.replace('/upload/', '/upload/f_auto,q_auto/');
+    }
+    if (optUrl.toLowerCase().endsWith('.heic')) {
+      optUrl = optUrl.substring(0, optUrl.length - 5) + '.jpg';
+    }
+    return optUrl;
+  }
+
   return url;
 }
 
 function renderInvitationCard() {
-  // Cover
-  document.getElementById('coverHostTitle').innerText = config.eventTitle || "Mừng Sinh Nhật";
-  document.getElementById('coverHostSub').innerText = config.hostName;
+  const setTxt = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = txt || "";
+  };
 
-  // Main Card
-  document.getElementById('cardAvatar').src = convertGoogleDriveUrl(config.avatarUrl || DEFAULT_CONFIG.avatarUrl);
-  document.getElementById('cardHostName').innerText = config.hostName;
-  document.getElementById('cardEventTitle').innerText = config.eventTitle;
-  document.getElementById('cardEventDateShort').innerText = config.eventDateText;
-  document.getElementById('cardGreetingQuote').innerText = `"${config.greetingQuote}"`;
-  const invMsgEl = document.getElementById('cardInvitationMessage');
-  if (invMsgEl) {
-    invMsgEl.innerText = config.invitationMessage || DEFAULT_CONFIG.invitationMessage || "Tới tham dự bữa tiệc sinh nhật thân mật cùng mình nhé!";
+  setTxt('coverHostTitle', config.eventTitle || "Mừng Sinh Nhật");
+  setTxt('coverHostSub', config.hostName || "");
+
+  const cardAvatar = document.getElementById('cardAvatar');
+  if (cardAvatar) {
+    cardAvatar.src = convertGoogleDriveUrl(config.avatarUrl || DEFAULT_CONFIG.avatarUrl);
   }
-  document.getElementById('cardDateText').innerText = config.eventDateText;
-  document.getElementById('cardLunarDateText').innerText = config.lunarDateText || "";
-  document.getElementById('cardLocationName').innerText = config.locationName;
-  document.getElementById('cardLocationAddress').innerText = config.locationAddress;
-  document.getElementById('cardMapsBtn').href = config.googleMapsUrl || "#";
 
-  // Audio
-  document.getElementById('bgAudio').src = config.musicUrl || DEFAULT_CONFIG.musicUrl;
+  setTxt('cardHostName', config.hostName);
+  setTxt('cardEventTitle', config.eventTitle);
+  setTxt('cardEventDateShort', config.eventDateText);
+  setTxt('cardGreetingQuote', `"${config.greetingQuote || ""}"`);
+  setTxt('cardInvitationMessage', config.invitationMessage || DEFAULT_CONFIG.invitationMessage || "Tới tham dự bữa tiệc sinh nhật thân mật cùng mình nhé!");
+  setTxt('cardDateText', config.eventDateText);
+  setTxt('cardLunarDateText', config.lunarDateText || "");
+  setTxt('cardLocationName', config.locationName);
+  setTxt('cardLocationAddress', config.locationAddress);
+
+  const mapsBtn = document.getElementById('cardMapsBtn');
+  if (mapsBtn) mapsBtn.href = config.googleMapsUrl || "#";
+
+  const audioEl = document.getElementById('bgAudio');
+  if (audioEl) audioEl.src = config.musicUrl || DEFAULT_CONFIG.musicUrl;
 
   // Album ảnh
   const galleryBox = document.getElementById('galleryContainer');
-  const gallery = (config.galleryUrls && config.galleryUrls.length > 0 ? config.galleryUrls : DEFAULT_CONFIG.galleryUrls).map(convertGoogleDriveUrl);
-  const rotations = ['rotate-[-2deg]', 'rotate-[2deg]', 'rotate-[1deg]', 'rotate-[-1deg]'];
-  galleryBox.innerHTML = gallery.map((url, index) => `
-    <div class="bg-white p-2 rounded-2xl shadow-xs border border-stone-100 ${rotations[index % 4]} hover:rotate-0 transition-transform duration-300">
-      <img src="${url}" class="w-full h-36 object-cover rounded-xl" alt="Gallery Photo ${index + 1}" onerror="this.parentElement.remove()" />
-    </div>
-  `).join('');
+  if (galleryBox) {
+    const gallery = (config.galleryUrls && config.galleryUrls.length > 0 ? config.galleryUrls : DEFAULT_CONFIG.galleryUrls).map(convertGoogleDriveUrl);
+    const rotations = ['rotate-[-2deg]', 'rotate-[2deg]', 'rotate-[1deg]', 'rotate-[-1deg]'];
+    galleryBox.innerHTML = gallery.map((url, index) => `
+      <div class="bg-white p-2 rounded-2xl shadow-xs border border-stone-100 ${rotations[index % 4]} hover:rotate-0 transition-transform duration-300">
+        <img src="${url}" class="w-full h-36 object-cover rounded-xl" alt="Gallery Photo ${index + 1}" loading="lazy" />
+      </div>
+    `).join('');
+  }
 
   // VietQR Modal Setup
   setupQrModal();
 
-  // Guest Name
+  // Guest Name & Wishes
   initGuestName();
   renderWishes();
-
-  // Tự động quét & nạp ảnh mới nhất từ Google Drive (nếu có thêm ảnh mới)
-  autoFetchDriveFolders();
 }
 
-async function autoFetchDriveFolders() {
-  try {
-    await syncAllDriveFolders(true);
-  } catch (e) {
-    console.warn("Tự động đồng bộ Drive ngầm:", e);
+function getCloudinaryConfig() {
+  const inputCloudName = document.getElementById('inputCloudName')?.value.trim();
+  const inputUploadPreset = document.getElementById('inputUploadPreset')?.value.trim();
+  const inputFolder = document.getElementById('inputCloudinaryFolder')?.value.trim();
+
+  const env = window.ENV || {};
+  return {
+    cloudName: (inputCloudName || env.CLOUDINARY_CLOUD_NAME || "").trim(),
+    uploadPreset: (inputUploadPreset || env.CLOUDINARY_UPLOAD_PRESET || "").trim(),
+    folder: (inputFolder || env.CLOUDINARY_FOLDER || "birthday_invitation").trim()
+  };
+}
+
+function saveCloudinaryEnvSettings() {
+  const cloudName = document.getElementById('inputCloudName')?.value.trim() || "";
+  const uploadPreset = document.getElementById('inputUploadPreset')?.value.trim() || "";
+  const folder = document.getElementById('inputCloudinaryFolder')?.value.trim() || "";
+
+  if (cloudName || uploadPreset || folder) {
+    window.ENV = {
+      ...window.ENV,
+      CLOUDINARY_CLOUD_NAME: cloudName || window.ENV.CLOUDINARY_CLOUD_NAME,
+      CLOUDINARY_UPLOAD_PRESET: uploadPreset || window.ENV.CLOUDINARY_UPLOAD_PRESET,
+      CLOUDINARY_FOLDER: folder || window.ENV.CLOUDINARY_FOLDER
+    };
+    try {
+      localStorage.setItem('partyinvi_env_config', JSON.stringify(window.ENV));
+      showToast("Đã lưu cài đặt Cloudinary!", "success");
+    } catch (e) {}
   }
 }
 
-async function syncAllDriveFolders(isSilent = false) {
-  if (!isSilent) {
-    showToast("Đang đồng bộ từ Google Drive...", "info");
+async function uploadToCloudinary(file) {
+  const { cloudName, uploadPreset, folder } = getCloudinaryConfig();
+
+  if (!cloudName || !uploadPreset || cloudName === 'your_cloud_name_here') {
+    throw new Error("Vui lòng điền Cloud Name và Upload Preset trong tệp .env hoặc phần Cấu Hình!");
   }
 
-  const coverFolderId = "1OWYzYN19tzXOa_vyjI-l78BH5NzuwUhm";
-  const galleryFolderId = "1yfsn0yVuerDDRzyQmmEyytwQNGIrmPx-";
-
-  // Quét 2 thư mục Bìa & Album SONG SONG cùng 1 lúc!
-  const [coverFiles, galleryFiles] = await Promise.all([
-    fetchDriveFolderFileIds(coverFolderId),
-    fetchDriveFolderFileIds(galleryFolderId)
-  ]);
-
-  // 1. Quét Thư mục Ảnh Bìa
-  if (coverFiles && coverFiles.length > 0) {
-    const coverUrls = coverFiles.map(id => `https://lh3.googleusercontent.com/d/${id}`);
-    currentCoverUrls = coverUrls;
-    config.coverUrls = coverUrls;
-    if (!config.avatarUrl || !coverUrls.includes(config.avatarUrl)) {
-      config.avatarUrl = coverUrls[0];
-    }
-
-    const cardAvatar = document.getElementById('cardAvatar');
-    if (cardAvatar) cardAvatar.src = config.avatarUrl;
-
-    renderAvatarEditPreview();
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', uploadPreset);
+  if (folder) {
+    formData.append('folder', folder);
   }
 
-  // 2. Quét Thư mục Album Kỷ Niệm
-  if (galleryFiles && galleryFiles.length > 0) {
-    const galleryUrls = galleryFiles.map(id => `https://lh3.googleusercontent.com/d/${id}`);
-    config.galleryUrls = galleryUrls;
-    currentGalleryUrls = [...galleryUrls];
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
 
-    const galleryBox = document.getElementById('galleryContainer');
-    if (galleryBox) {
-      const rotations = ['rotate-[-2deg]', 'rotate-[2deg]', 'rotate-[1deg]', 'rotate-[-1deg]'];
-      galleryBox.innerHTML = galleryUrls.map((url, index) => `
-        <div class="bg-white p-2 rounded-2xl shadow-xs border border-stone-100 ${rotations[index % 4]} hover:rotate-0 transition-transform duration-300">
-          <img src="${url}" class="w-full h-36 object-cover rounded-xl" alt="Gallery Photo ${index + 1}" onerror="this.parentElement.remove()" />
-        </div>
-      `).join('');
-    }
-
-    renderGalleryEditPreview();
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.error?.message || `Lỗi tải ảnh Cloudinary (${res.status})`);
   }
 
-  await saveConfigToStorage(config);
-  if (!isSilent) {
-    showToast("⚡ Đã đồng bộ Ảnh Bìa & Album! 🎉", "success");
-  }
+  const data = await res.json();
+  return data.secure_url || data.url;
 }
 
 async function saveConfigToStorage(configObj) {
@@ -300,65 +335,17 @@ async function saveConfigToStorage(configObj) {
   }
 }
 
-async function fetchDriveFolderFileIds(folderId) {
-  const targetUrl = `https://drive.google.com/embeddedfolderview?id=${folderId}`;
-  const timestamp = Date.now();
-  const proxyUrls = [
-    `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}&_t=${timestamp}`
-  ];
-
-  const fetchPromises = proxyUrls.map(pUrl =>
-    fetch(pUrl)
-      .then(async res => {
-        if (!res.ok) throw new Error("Proxy error " + res.status);
-        const rawText = await res.text();
-        let html = rawText;
-        try {
-          const json = JSON.parse(rawText);
-          html = json.contents || json;
-        } catch (e) { }
-
-        if (html && typeof html === 'string' && html.includes('drive.google.com/file/d/')) {
-          return html;
-        }
-        throw new Error("No file links found");
-      })
-  );
-
-  let htmlContent = "";
-  try {
-    if (Promise.any) {
-      htmlContent = await Promise.any(fetchPromises);
-    } else {
-      htmlContent = await Promise.race(fetchPromises);
-    }
-  } catch (err) {
-    console.warn("Proxy parallel fetch fallback:", err);
-  }
-
-  const matches = [];
-  if (htmlContent && typeof htmlContent === 'string') {
-    const regex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/g;
-    let m;
-    while ((m = regex.exec(htmlContent)) !== null) {
-      if (!matches.includes(m[1])) {
-        matches.push(m[1]);
-      }
-    }
-  }
-  return matches;
-}
-
 function initGuestName() {
   const urlParams = new URLSearchParams(window.location.search);
   const guestName = urlParams.get('to') || urlParams.get('guest');
   if (guestName) {
     const decodedName = decodeURIComponent(guestName.replace(/\+/g, ' '));
-    document.getElementById('guestNameCover').innerText = decodedName;
-    document.getElementById('guestNameMain').innerText = decodedName;
-    document.getElementById('wishAuthor').value = decodedName;
+    const gCover = document.getElementById('guestNameCover');
+    if (gCover) gCover.innerText = decodedName;
+    const gMain = document.getElementById('guestNameMain');
+    if (gMain) gMain.innerText = decodedName;
+    const wishAuth = document.getElementById('wishAuthor');
+    if (wishAuth) wishAuth.value = decodedName;
   }
 }
 
@@ -538,120 +525,139 @@ function autoFormatDateText() {
 }
 
 // 6. POPULATE FORM & SAVE CONFIG (VIEW EDIT)
-let currentCoverUrls = [];
 let currentGalleryUrls = [];
 
 function populateBankSelect() {
   const select = document.getElementById('inputBankId');
-  select.innerHTML = VIETNAM_BANKS.map(b => `<option value="${b.bin}">${b.name}</option>`).join('');
+  if (select) {
+    select.innerHTML = VIETNAM_BANKS.map(b => `<option value="${b.bin}">${b.name}</option>`).join('');
+  }
 }
 
 function populateEditForm() {
   populateBankSelect();
 
-  document.getElementById('inputHostName').value = config.hostName || "";
-  document.getElementById('inputEventTitle').value = config.eventTitle || "";
-  document.getElementById('inputGreetingQuote').value = config.greetingQuote || "";
-  document.getElementById('inputInvitationMessage').value = config.invitationMessage || DEFAULT_CONFIG.invitationMessage || "";
-  document.getElementById('inputEventDateISO').value = config.eventDateISO || "";
-  document.getElementById('inputEventDateText').value = config.eventDateText || "";
-  document.getElementById('inputLunarDateText').value = config.lunarDateText || "";
-  document.getElementById('inputLocationName').value = config.locationName || "";
-  document.getElementById('inputLocationAddress').value = config.locationAddress || "";
-  document.getElementById('inputGoogleMapsUrl').value = config.googleMapsUrl || "";
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || "";
+  };
 
-  // Avatar preview setup (Dạng grid giống Album)
-  const activeAvatarUrl = config.avatarUrl || DEFAULT_CONFIG.avatarUrl;
-  currentCoverUrls = (config.coverUrls && config.coverUrls.length > 0)
-    ? [...config.coverUrls]
-    : [activeAvatarUrl];
+  setVal('inputHostName', config.hostName);
+  setVal('inputEventTitle', config.eventTitle);
+  setVal('inputGreetingQuote', config.greetingQuote);
+  setVal('inputInvitationMessage', config.invitationMessage || DEFAULT_CONFIG.invitationMessage);
+  setVal('inputEventDateISO', config.eventDateISO);
+  setVal('inputEventDateText', config.eventDateText);
+  setVal('inputLunarDateText', config.lunarDateText);
+  setVal('inputLocationName', config.locationName);
+  setVal('inputLocationAddress', config.locationAddress);
+  setVal('inputGoogleMapsUrl', config.googleMapsUrl);
 
-  if (!currentCoverUrls.includes(activeAvatarUrl)) {
-    currentCoverUrls.unshift(activeAvatarUrl);
-  }
+  const env = window.ENV || {};
+  setVal('inputCloudName', env.CLOUDINARY_CLOUD_NAME || "");
+  setVal('inputUploadPreset', env.CLOUDINARY_UPLOAD_PRESET || "");
+  setVal('inputCloudinaryFolder', env.CLOUDINARY_FOLDER || "");
 
-  renderAvatarEditPreview();
-
-  // Gallery album setup
   currentGalleryUrls = [...(config.galleryUrls && config.galleryUrls.length > 0 ? config.galleryUrls : DEFAULT_CONFIG.galleryUrls)];
+
+  if (!config.avatarUrl || (!currentGalleryUrls.includes(config.avatarUrl) && !config.avatarUrl.startsWith('data:'))) {
+    config.avatarUrl = currentGalleryUrls[0] || DEFAULT_CONFIG.avatarUrl;
+  }
+  setVal('inputAvatarUrl', config.avatarUrl);
+
   renderGalleryEditPreview();
 
   const qr = config.qr || DEFAULT_CONFIG.qr;
-  document.getElementById('inputBankId').value = qr.bankId || "970422";
-  document.getElementById('inputAccountNo').value = qr.accountNo || "";
-  document.getElementById('inputAccountName').value = qr.accountName || "";
-  document.getElementById('inputAddInfo').value = qr.addInfo || "";
-  document.getElementById('inputAmount').value = qr.amount || "";
+  setVal('inputBankId', qr.bankId || "970422");
+  setVal('inputAccountNo', qr.accountNo);
+  setVal('inputAccountName', qr.accountName);
+  setVal('inputAddInfo', qr.addInfo);
+  setVal('inputAmount', qr.amount);
 
   updateQrPreview();
 }
 
-function renderAvatarEditPreview() {
-  const grid = document.getElementById('avatarEditPreviewGrid');
+function renderGalleryEditPreview() {
+  const grid = document.getElementById('galleryEditPreviewGrid');
   if (!grid) return;
 
-  if (!currentCoverUrls || currentCoverUrls.length === 0) {
-    grid.innerHTML = `<div class="col-span-3 text-center py-4 text-xs text-rose-500 font-medium bg-rose-50 rounded-xl border border-rose-200">Chưa có ảnh bìa! Vui lòng bấm Cập Nhật Ảnh Bìa từ Drive.</div>`;
-    document.getElementById('inputAvatarUrl').value = '';
+  if (!currentGalleryUrls || currentGalleryUrls.length === 0) {
+    grid.innerHTML = `<p class="col-span-3 text-[11px] text-stone-400 italic text-center py-3">Chưa có ảnh nào trong album</p>`;
+    const avatarInput = document.getElementById('inputAvatarUrl');
+    if (avatarInput) avatarInput.value = '';
     return;
   }
 
-  const activeUrl = config.avatarUrl || currentCoverUrls[0];
+  const activeAvatar = config.avatarUrl || currentGalleryUrls[0];
+  const avatarInput = document.getElementById('inputAvatarUrl');
+  if (avatarInput) avatarInput.value = activeAvatar;
 
-  grid.innerHTML = currentCoverUrls.map((url, idx) => {
-    const isSelected = (url === activeUrl) || (!currentCoverUrls.includes(activeUrl) && idx === 0);
+  grid.innerHTML = currentGalleryUrls.map((url, idx) => {
+    const isCover = (url === activeAvatar) || (!currentGalleryUrls.includes(activeAvatar) && idx === 0);
     return `
-      <div onclick="selectCoverPhoto(${idx})"
-        class="relative group rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${isSelected ? 'border-2 border-pink-500 ring-2 ring-pink-200 shadow-md scale-[1.02] bg-white' : 'border border-stone-200 opacity-60 hover:opacity-100 hover:border-pink-300 bg-stone-50'}">
-        <img src="${url}" class="w-full h-24 object-cover" alt="Cover Candidate ${idx + 1}" />
-        ${isSelected ? `
+      <div onclick="selectCoverPhotoByUrl('${url}')"
+        class="relative group rounded-xl overflow-hidden cursor-pointer transition-all duration-200 h-28 bg-stone-100 ${isCover ? 'border-2 border-pink-500 ring-2 ring-pink-300 shadow-md scale-[1.02]' : 'border border-stone-200 opacity-80 hover:opacity-100 hover:border-pink-300'}">
+        <img src="${convertGoogleDriveUrl(url)}" class="w-full h-full object-cover" alt="Album Photo ${idx + 1}" loading="lazy" />
+        
+        ${isCover ? `
           <span class="absolute top-1.5 left-1.5 bg-pink-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1">
-            <i class="fa-solid fa-circle-check"></i> Ảnh Bìa
+            <i class="fa-solid fa-star text-amber-300"></i> Ảnh Bìa Thiệp
           </span>
           <div class="absolute top-1.5 right-1.5 bg-pink-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-sm">
             <i class="fa-solid fa-check"></i>
           </div>
         ` : `
-          <button type="button" onclick="removeCoverUrlAtIndex(event, ${idx})"
-            class="absolute top-1.5 right-1.5 bg-stone-700/70 hover:bg-rose-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-xs transition" title="Xóa bức ảnh này">
+          <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <span class="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">
+              <i class="fa-solid fa-hand-pointer text-pink-500"></i> Chọn làm Ảnh Bìa
+            </span>
+          </div>
+          <button type="button" onclick="removeGalleryItem(event, ${idx})" title="Xóa ảnh này" 
+            class="absolute top-1.5 right-1.5 bg-stone-800/70 hover:bg-rose-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-xs transition">
             <i class="fa-solid fa-xmark"></i>
           </button>
         `}
       </div>
     `;
   }).join('');
+}
 
-  document.getElementById('inputAvatarUrl').value = activeUrl;
+function selectCoverPhotoByUrl(url) {
+  if (!url) return;
+  config.avatarUrl = url;
+
+  const avatarInput = document.getElementById('inputAvatarUrl');
+  if (avatarInput) avatarInput.value = url;
+
+  const cardAvatar = document.getElementById('cardAvatar');
+  if (cardAvatar) cardAvatar.src = convertGoogleDriveUrl(url);
+
+  renderGalleryEditPreview();
+  showToast("Đã chọn tấm ảnh này làm Ảnh Bìa Thiệp! 🌸", "success");
 }
 
 function selectCoverPhoto(index) {
-  if (!currentCoverUrls || !currentCoverUrls[index]) return;
-
-  const selectedUrl = currentCoverUrls[index];
-  config.avatarUrl = selectedUrl;
-
-  const cardAvatar = document.getElementById('cardAvatar');
-  if (cardAvatar) cardAvatar.src = selectedUrl;
-
-  document.getElementById('inputAvatarUrl').value = selectedUrl;
-  renderAvatarEditPreview();
-  showToast("Đã chọn làm Ảnh Bìa Thiệp! 🌸", "success");
+  if (currentGalleryUrls && currentGalleryUrls[index]) {
+    selectCoverPhotoByUrl(currentGalleryUrls[index]);
+  }
 }
 
-function removeCoverUrlAtIndex(event, index) {
-  event.stopPropagation();
-  currentCoverUrls.splice(index, 1);
-  if (currentCoverUrls.length > 0) {
-    if (!currentCoverUrls.includes(config.avatarUrl)) {
-      config.avatarUrl = currentCoverUrls[0];
+function removeGalleryItem(event, index) {
+  if (event) event.stopPropagation();
+  const removedUrl = currentGalleryUrls[index];
+  currentGalleryUrls.splice(index, 1);
+
+  if (currentGalleryUrls.length > 0) {
+    if (config.avatarUrl === removedUrl) {
+      config.avatarUrl = currentGalleryUrls[0];
       const cardAvatar = document.getElementById('cardAvatar');
-      if (cardAvatar) cardAvatar.src = currentCoverUrls[0];
+      if (cardAvatar) cardAvatar.src = convertGoogleDriveUrl(currentGalleryUrls[0]);
     }
-    showToast("Đã xóa ảnh khỏi danh sách.", "info");
+    showToast("Đã xóa ảnh khỏi album.", "info");
   } else {
-    showToast("Vui lòng giữ lại ít nhất 1 ảnh làm Ảnh Bìa!", "warning");
+    showToast("Đã xóa ảnh. Album đang trống!", "warning");
   }
-  renderAvatarEditPreview();
+  renderGalleryEditPreview();
 }
 
 function addGalleryUrlFromPrompt() {
@@ -665,7 +671,7 @@ function addGalleryUrlFromPrompt() {
 }
 
 async function syncGoogleDriveFolder(folderType = 'gallery') {
-  await syncAllDriveFolders();
+  await syncDriveFolder();
 }
 
 function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.75) {
@@ -708,13 +714,18 @@ async function handleAvatarUpload(event) {
   if (!file) return;
 
   try {
-    showToast("Đang xử lý & nén ảnh...", "info");
-    const compressedUrl = await compressImage(file, 800, 800, 0.75);
-    document.getElementById('inputAvatarUrl').value = compressedUrl;
-    document.getElementById('avatarPreviewEdit').src = compressedUrl;
-    showToast("Đã tải ảnh đại diện thành công!", "success");
+    showToast("Đang tải ảnh lên Cloudinary CDN...", "info");
+    const cloudinaryUrl = await uploadToCloudinary(file);
+    config.avatarUrl = cloudinaryUrl;
+    if (!currentGalleryUrls.includes(cloudinaryUrl)) {
+      currentGalleryUrls.unshift(cloudinaryUrl);
+    }
+    const avatarInput = document.getElementById('inputAvatarUrl');
+    if (avatarInput) avatarInput.value = cloudinaryUrl;
+    renderGalleryEditPreview();
+    showToast("Đã tải & chọn Ảnh Bìa Cloudinary thành công! 🎉", "success");
   } catch (err) {
-    showToast("Lỗi khi xử lý file ảnh!", "warning");
+    showToast(err.message || "Lỗi khi tải ảnh lên Cloudinary!", "warning");
   }
 }
 
@@ -722,92 +733,91 @@ async function handleGalleryUpload(event) {
   const files = Array.from(event.target.files);
   if (files.length === 0) return;
 
-  showToast(`Đang nén ${files.length} ảnh...`, "info");
+  showToast(`Đang tải ${files.length} ảnh lên Cloudinary CDN...`, "info");
+  let successCount = 0;
+
   for (const file of files) {
     try {
-      const compressedUrl = await compressImage(file, 800, 800, 0.75);
-      currentGalleryUrls.push(compressedUrl);
+      const cloudinaryUrl = await uploadToCloudinary(file);
+      currentGalleryUrls.unshift(cloudinaryUrl);
+      successCount++;
     } catch (err) {
-      console.error("Lỗi nén ảnh:", err);
+      console.error("Lỗi upload Cloudinary:", err);
+      showToast(err.message || "Lỗi khi tải ảnh lên Cloudinary!", "warning");
     }
   }
-  renderGalleryEditPreview();
-  showToast(`Đã thêm ${files.length} ảnh vào album!`, "success");
-}
 
-function removeGalleryItem(index) {
-  currentGalleryUrls.splice(index, 1);
-  renderGalleryEditPreview();
-  showToast("Đã xóa ảnh khỏi album", "info");
-}
-
-function renderGalleryEditPreview() {
-  const grid = document.getElementById('galleryEditPreviewGrid');
-  if (!grid) return;
-
-  if (currentGalleryUrls.length === 0) {
-    grid.innerHTML = `<p class="col-span-3 text-[11px] text-stone-400 italic text-center py-3">Chưa có ảnh nào trong album</p>`;
-    return;
+  if (successCount > 0) {
+    config.galleryUrls = currentGalleryUrls;
+    if (!config.avatarUrl || !currentGalleryUrls.includes(config.avatarUrl)) {
+      config.avatarUrl = currentGalleryUrls[0];
+    }
+    saveConfigToStorage(config);
+    renderGalleryEditPreview();
+    showToast(`⚡ Đã tải ${successCount} ảnh lên Cloudinary thành công! 🎉`, "success");
   }
-
-  grid.innerHTML = currentGalleryUrls.map((url, idx) => `
-    <div class="relative group rounded-xl overflow-hidden border border-stone-200 bg-stone-100 h-24">
-      <img src="${url}" class="w-full h-full object-cover" alt="Album photo ${idx + 1}" />
-      <button type="button" onclick="removeGalleryItem(${idx})" title="Xóa ảnh này" 
-              class="absolute top-1.5 right-1.5 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow-md transition">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-  `).join('');
 }
 
 function updateQrPreview() {
-  const bankId = document.getElementById('inputBankId').value;
-  const accountNo = document.getElementById('inputAccountNo').value.trim();
-  const accountName = document.getElementById('inputAccountName').value.trim();
-  const addInfo = document.getElementById('inputAddInfo').value.trim();
-  const amount = document.getElementById('inputAmount').value;
+  const bankIdEl = document.getElementById('inputBankId');
+  const accountNoEl = document.getElementById('inputAccountNo');
+  const accountNameEl = document.getElementById('inputAccountName');
+  const addInfoEl = document.getElementById('inputAddInfo');
+  const amountEl = document.getElementById('inputAmount');
 
-  document.getElementById('qrPreviewImg').src = buildVietQrUrl(bankId, accountNo, accountName, amount, addInfo);
+  const bankId = bankIdEl ? bankIdEl.value : "970422";
+  const accountNo = accountNoEl ? accountNoEl.value.trim() : "";
+  const accountName = accountNameEl ? accountNameEl.value.trim() : "";
+  const addInfo = addInfoEl ? addInfoEl.value.trim() : "";
+  const amount = amountEl ? amountEl.value : "";
+
+  const previewImg = document.getElementById('qrPreviewImg');
+  if (previewImg) {
+    previewImg.src = buildVietQrUrl(bankId, accountNo, accountName, amount, addInfo);
+  }
 }
 
 function saveConfig(e) {
   e.preventDefault();
 
-  if (!currentCoverUrls || currentCoverUrls.length === 0) {
-    showToast("Vui lòng giữ lại ít nhất 1 ảnh để làm Ảnh Đại Diện (Bìa)!", "warning");
+  saveCloudinaryEnvSettings();
+
+  if (!currentGalleryUrls || currentGalleryUrls.length === 0) {
+    showToast("Vui lòng giữ lại ít nhất 1 ảnh trong album!", "warning");
     return;
   }
 
-  const chosenAvatarUrl = (config.avatarUrl && currentCoverUrls.includes(config.avatarUrl))
-    ? config.avatarUrl
-    : currentCoverUrls[0];
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : "";
+  };
 
-  const bankId = document.getElementById('inputBankId').value;
+  const bankId = getVal('inputBankId') || "970422";
   const bankObj = VIETNAM_BANKS.find(b => b.bin === bankId);
 
+  const chosenAvatarUrl = getVal('inputAvatarUrl') || config.avatarUrl || currentGalleryUrls[0];
+
   config = {
-    hostName: document.getElementById('inputHostName').value.trim(),
-    eventTitle: document.getElementById('inputEventTitle').value.trim(),
-    greetingQuote: document.getElementById('inputGreetingQuote').value.trim(),
-    invitationMessage: document.getElementById('inputInvitationMessage').value.trim(),
-    eventDateISO: document.getElementById('inputEventDateISO').value,
-    eventDateText: document.getElementById('inputEventDateText').value.trim(),
-    lunarDateText: document.getElementById('inputLunarDateText').value.trim(),
-    locationName: document.getElementById('inputLocationName').value.trim(),
-    locationAddress: document.getElementById('inputLocationAddress').value.trim(),
-    googleMapsUrl: document.getElementById('inputGoogleMapsUrl').value.trim(),
+    hostName: getVal('inputHostName'),
+    eventTitle: getVal('inputEventTitle'),
+    greetingQuote: getVal('inputGreetingQuote'),
+    invitationMessage: getVal('inputInvitationMessage'),
+    eventDateISO: getVal('inputEventDateISO'),
+    eventDateText: getVal('inputEventDateText'),
+    lunarDateText: getVal('inputLunarDateText'),
+    locationName: getVal('inputLocationName'),
+    locationAddress: getVal('inputLocationAddress'),
+    googleMapsUrl: getVal('inputGoogleMapsUrl'),
     avatarUrl: chosenAvatarUrl,
-    coverUrls: currentCoverUrls,
     galleryUrls: currentGalleryUrls,
-    musicUrl: config.musicUrl || "",
+    musicUrl: config.musicUrl || DEFAULT_CONFIG.musicUrl,
     qr: {
       bankId: bankId,
       bankName: bankObj ? bankObj.name : "",
-      accountNo: document.getElementById('inputAccountNo').value.trim(),
-      accountName: document.getElementById('inputAccountName').value.trim().toUpperCase(),
-      addInfo: document.getElementById('inputAddInfo').value.trim(),
-      amount: document.getElementById('inputAmount').value
+      accountNo: getVal('inputAccountNo'),
+      accountName: getVal('inputAccountName').toUpperCase(),
+      addInfo: getVal('inputAddInfo'),
+      amount: getVal('inputAmount')
     }
   };
 
@@ -816,13 +826,13 @@ function saveConfig(e) {
     showToast("Đã lưu tất cả thay đổi thành công! 🎉", "success");
     setTimeout(() => switchRoute('/'), 800);
   } catch (err) {
-    showToast("Dung lượng ảnh quá lớn không thể lưu vào trình duyệt!", "warning");
+    showToast("Có lỗi khi lưu thông tin!", "warning");
   }
 }
 
 function resetToDefaultConfig() {
   if (confirm("Bạn có chắc chắn muốn khôi phục cấu hình mặc định ban đầu?")) {
-    config = DEFAULT_CONFIG;
+    config = { ...DEFAULT_CONFIG };
     localStorage.removeItem('birthday_invitation_config');
     populateEditForm();
     showToast("Đã khôi phục dữ liệu mặc định", "info");
